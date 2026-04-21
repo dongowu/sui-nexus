@@ -41,6 +41,17 @@ type TaskStatus string
 const (
 	StatusPending    TaskStatus = "pending"
 	StatusProcessing TaskStatus = "processing"
-	StatusCompleted TaskStatus = "completed"
-	StatusFailed    TaskStatus = "failed"
+	StatusCompleted  TaskStatus = "completed"
+	StatusFailed     TaskStatus = "failed"
 )
+
+type Task struct {
+	TaskID     string          `json:"task_id"`
+	Status     TaskStatus      `json:"status"`
+	Intent     *IntentRequest  `json:"intent"`
+	TxDigest   string          `json:"tx_digest,omitempty"`
+	BlobID     string          `json:"blob_id,omitempty"`
+	CreatedAt  time.Time       `json:"created_at"`
+	UpdatedAt  time.Time       `json:"updated_at"`
+	RetryCount int             `json:"retry_count"`
+}
