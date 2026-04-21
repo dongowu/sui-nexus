@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type AgentShare struct {
 	Address string  `json:"address"`
 	Share   float64 `json:"share"` // 比例，如 0.1 表示 10%
