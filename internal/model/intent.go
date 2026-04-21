@@ -1,7 +1,5 @@
 package model
 
-import "time"
-
 type AgentShare struct {
 	Address string  `json:"address"`
 	Share   float64 `json:"share"` // 比例，如 0.1 表示 10%
@@ -46,14 +44,3 @@ const (
 	StatusCompleted TaskStatus = "completed"
 	StatusFailed    TaskStatus = "failed"
 )
-
-type Task struct {
-	TaskID     string          `json:"task_id"`
-	Status     TaskStatus      `json:"status"`
-	Intent     *IntentRequest  `json:"intent"`
-	TxDigest   string          `json:"tx_digest,omitempty"`
-	BlobID     string          `json:"blob_id,omitempty"`
-	CreatedAt  time.Time       `json:"created_at"`
-	UpdatedAt  time.Time       `json:"updated_at"`
-	RetryCount int             `json:"retry_count"`
-}
