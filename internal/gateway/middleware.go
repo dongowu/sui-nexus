@@ -3,6 +3,7 @@ package gateway
 import (
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -38,6 +39,8 @@ func HMACAuth(signer *hmac.Signer) gin.HandlerFunc {
 		}
 
 		c.Set("api_key", apiKey)
+		c.Set("auth_signature", signature)
+		c.Set("auth_timestamp", timestamp)
 		c.Next()
 	}
 }
@@ -48,6 +51,7 @@ func RateLimit(limit int) gin.HandlerFunc {
 		lastReset time.Time
 	}
 
+	var mu sync.Mutex
 	buckets := make(map[string]*bucket)
 
 	return func(c *gin.Context) {
@@ -56,6 +60,7 @@ func RateLimit(limit int) gin.HandlerFunc {
 			apiKey = c.ClientIP()
 		}
 
+		mu.Lock()
 		b, exists := buckets[apiKey]
 		if !exists {
 			b = &bucket{tokens: limit, lastReset: time.Now()}
@@ -68,6 +73,7 @@ func RateLimit(limit int) gin.HandlerFunc {
 		}
 
 		if b.tokens <= 0 {
+			mu.Unlock()
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 				"error": "Rate limit exceeded",
 			})
@@ -75,6 +81,7 @@ func RateLimit(limit int) gin.HandlerFunc {
 		}
 
 		b.tokens--
+		mu.Unlock()
 		c.Next()
 	}
 }

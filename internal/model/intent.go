@@ -9,9 +9,9 @@ type AgentShare struct {
 
 type IntentRequest struct {
 	TaskID         string       `json:"task_id" binding:"required"`
-	APIKey         string       `json:"api_key" binding:"required"`
-	Signature      string       `json:"signature" binding:"required"`
-	Timestamp      int64        `json:"timestamp" binding:"required"`
+	APIKey         string       `json:"api_key,omitempty"`
+	Signature      string       `json:"signature,omitempty"`
+	Timestamp      int64        `json:"timestamp,omitempty"`
 	Agents         []AgentShare `json:"agents" binding:"required"`
 	Action         string       `json:"action" binding:"required"` // Swap, Stake, Transfer
 	Params         ActionParams `json:"params" binding:"required"`
@@ -19,11 +19,16 @@ type IntentRequest struct {
 }
 
 type ActionParams struct {
-	Amount    string `json:"amount"`
-	TokenIn   string `json:"token_in"`
-	TokenOut  string `json:"token_out"`
-	Slippage  string `json:"slippage"`
-	DestAddr  string `json:"dest_addr,omitempty"`
+	Amount              string        `json:"amount"`
+	TokenIn             string        `json:"token_in"`
+	TokenOut            string        `json:"token_out"`
+	Slippage            string        `json:"slippage"`
+	DestAddr            string        `json:"dest_addr,omitempty"`
+	MovePackageObjectID string        `json:"move_package_object_id,omitempty"`
+	MoveModule          string        `json:"move_module,omitempty"`
+	MoveFunction        string        `json:"move_function,omitempty"`
+	MoveTypeArguments   []interface{} `json:"move_type_arguments,omitempty"`
+	MoveArguments       []interface{} `json:"move_arguments,omitempty"`
 }
 
 type IntentResponse struct {
@@ -48,12 +53,12 @@ const (
 )
 
 type Task struct {
-	TaskID     string          `json:"task_id"`
-	Status     TaskStatus      `json:"status"`
-	Intent     *IntentRequest  `json:"intent"`
-	TxDigest   string          `json:"tx_digest,omitempty"`
-	BlobID     string          `json:"blob_id,omitempty"`
-	CreatedAt  time.Time       `json:"created_at"`
-	UpdatedAt  time.Time       `json:"updated_at"`
-	RetryCount int             `json:"retry_count"`
+	TaskID     string         `json:"task_id"`
+	Status     TaskStatus     `json:"status"`
+	Intent     *IntentRequest `json:"intent"`
+	TxDigest   string         `json:"tx_digest,omitempty"`
+	BlobID     string         `json:"blob_id,omitempty"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+	RetryCount int            `json:"retry_count"`
 }

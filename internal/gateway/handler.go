@@ -7,20 +7,22 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/sui-nexus/gateway/internal/kafka"
 	"github.com/sui-nexus/gateway/internal/model"
 	"github.com/sui-nexus/gateway/internal/storage"
 	"github.com/sui-nexus/gateway/pkg/hmac"
 )
 
+type IntentProducer interface {
+	SendIntent(task *model.Task) error
+}
+
 type Handler struct {
 	signer     *hmac.Signer
-	producer   *kafka.Producer
+	producer   IntentProducer
 	redisStore *storage.RedisStore
 }
 
-func NewHandler(signer *hmac.Signer, producer *kafka.Producer, redisStore *storage.RedisStore) *Handler {
+func NewHandler(signer *hmac.Signer, producer IntentProducer, redisStore *storage.RedisStore) *Handler {
 	return &Handler{
 		signer:     signer,
 		producer:   producer,
@@ -43,7 +45,12 @@ func (h *Handler) HandleIntent(c *gin.Context) {
 	}
 
 	// Verify HMAC signature
-	if err := h.signer.Verify(req.TaskID, req.Timestamp, req.Action, req.Params.Amount, req.Signature); err != nil {
+	apiKey, _ := c.Get("api_key")
+	signature, _ := c.Get("auth_signature")
+	timestamp, _ := c.Get("auth_timestamp")
+	authSignature, _ := signature.(string)
+	authTimestamp, _ := timestamp.(int64)
+	if err := h.signer.Verify(req.TaskID, authTimestamp, req.Action, req.Params.Amount, authSignature); err != nil {
 		log.Printf("Signature verification failed for task %s: %v", req.TaskID, err)
 		c.JSON(http.StatusUnauthorized, model.IntentResponse{
 			TaskID: req.TaskID,
@@ -55,11 +62,11 @@ func (h *Handler) HandleIntent(c *gin.Context) {
 		})
 		return
 	}
-
-	// Generate task if not provided
-	if req.TaskID == "" {
-		req.TaskID = uuid.New().String()
+	if apiKeyValue, ok := apiKey.(string); ok {
+		req.APIKey = apiKeyValue
 	}
+	req.Signature = authSignature
+	req.Timestamp = authTimestamp
 
 	// Create task
 	task := &model.Task{
@@ -68,6 +75,19 @@ func (h *Handler) HandleIntent(c *gin.Context) {
 		Intent:    &req,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
+	}
+
+	if h.producer == nil {
+		log.Printf("Kafka producer not available, rejecting task %s", req.TaskID)
+		c.JSON(http.StatusServiceUnavailable, model.IntentResponse{
+			TaskID: req.TaskID,
+			Status: model.StatusFailed,
+			Error: &model.ErrorDetail{
+				Code:    "ERR_QUEUE_UNAVAILABLE",
+				Message: "Task queue unavailable",
+			},
+		})
+		return
 	}
 
 	// Save to Redis
@@ -79,21 +99,17 @@ func (h *Handler) HandleIntent(c *gin.Context) {
 	}
 
 	// Send to Kafka
-	if h.producer != nil {
-		if err := h.producer.SendIntent(task); err != nil {
-			log.Printf("Failed to send task to Kafka: %v", err)
-			c.JSON(http.StatusInternalServerError, model.IntentResponse{
-				TaskID: req.TaskID,
-				Status: model.StatusFailed,
-				Error: &model.ErrorDetail{
-					Code:    "ERR_QUEUE_FAILED",
-					Message: "Failed to queue task",
-				},
-			})
-			return
-		}
-	} else {
-		log.Printf("Kafka producer not available, skipping queue")
+	if err := h.producer.SendIntent(task); err != nil {
+		log.Printf("Failed to send task to Kafka: %v", err)
+		c.JSON(http.StatusInternalServerError, model.IntentResponse{
+			TaskID: req.TaskID,
+			Status: model.StatusFailed,
+			Error: &model.ErrorDetail{
+				Code:    "ERR_QUEUE_FAILED",
+				Message: "Failed to queue task",
+			},
+		})
+		return
 	}
 
 	log.Printf("Task %s received and queued", req.TaskID)

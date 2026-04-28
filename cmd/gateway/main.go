@@ -48,9 +48,17 @@ func main() {
 
 	// Start Kafka Consumer (PTB Builder loop)
 	if producer != nil {
-		ptbBuilder := ptb.NewBuilder(10_000_000) // 0.01 SUI gas budget
+		ptbBuilder := ptb.NewBuilder(cfg.SuiGasBudget)
 		walrusClient := walrus.NewClient(cfg.WalrusAPIURL)
-		executor := ptb.NewExecutor(cfg.SuiRPCURL)
+		executor, err := ptb.NewSDKExecutor(cfg.SuiRPCURL, ptb.SDKExecutorConfig{
+			SignerMnemonic:   cfg.SuiSignerMnemonic,
+			SignerPrivateKey: cfg.SuiSignerPrivateKey,
+			GasObjectID:      cfg.SuiGasObjectID,
+		})
+		if err != nil {
+			log.Printf("Warning: Sui SDK executor not configured: %v (signed transaction bytes only)", err)
+			executor = ptb.NewExecutor(cfg.SuiRPCURL)
+		}
 
 		consumer, err := kafka.NewConsumer(cfg.KafkaBrokers, "sui-nexus-group", "sui-nexus-intents",
 			buildTaskHandler(ptbBuilder, walrusClient, executor, redisStore))
