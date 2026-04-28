@@ -204,5 +204,22 @@ func TestHandleHealth(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assert.Contains(t, w.Body.String(), `"queue"`)
+	assert.Contains(t, w.Body.String(), `"ready":false`)
+}
+
+func TestHandleHealthReportsReadyWhenQueueConfigured(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	signer := hmac.NewSigner("test-secret", 300)
+	handler := NewHandler(signer, &fakeProducer{}, nil)
+	r := NewRouter(handler, signer)
+
+	req, _ := http.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
 	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"queue"`)
+	assert.Contains(t, w.Body.String(), `"ready":true`)
 }

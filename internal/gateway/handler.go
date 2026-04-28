@@ -22,6 +22,18 @@ type Handler struct {
 	redisStore *storage.RedisStore
 }
 
+type componentHealth struct {
+	Ready    bool   `json:"ready"`
+	Required bool   `json:"required"`
+	Message  string `json:"message,omitempty"`
+}
+
+type healthResponse struct {
+	Status     string                     `json:"status"`
+	Ready      bool                       `json:"ready"`
+	Components map[string]componentHealth `json:"components"`
+}
+
 func NewHandler(signer *hmac.Signer, producer IntentProducer, redisStore *storage.RedisStore) *Handler {
 	return &Handler{
 		signer:     signer,
@@ -139,5 +151,38 @@ func (h *Handler) HandleGetTask(c *gin.Context) {
 }
 
 func (h *Handler) HandleHealth(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	queueReady := h.producer != nil
+	components := map[string]componentHealth{
+		"queue": {
+			Ready:    queueReady,
+			Required: true,
+		},
+		"storage": {
+			Ready:    h.redisStore != nil,
+			Required: false,
+		},
+	}
+	if !queueReady {
+		queue := components["queue"]
+		queue.Message = "Kafka producer is not configured; /api/v1/intent will return 503"
+		components["queue"] = queue
+	}
+	if h.redisStore == nil {
+		storageHealth := components["storage"]
+		storageHealth.Message = "Redis is not configured; task lookup is unavailable"
+		components["storage"] = storageHealth
+	}
+
+	status := "healthy"
+	httpStatus := http.StatusOK
+	if !queueReady {
+		status = "unavailable"
+		httpStatus = http.StatusServiceUnavailable
+	}
+
+	c.JSON(httpStatus, healthResponse{
+		Status:     status,
+		Ready:      queueReady,
+		Components: components,
+	})
 }

@@ -32,6 +32,8 @@ go run cmd/gateway/main.go
 ./scripts/demo/run_demo.sh
 ```
 
+See `docs/demo.md` for the judge-facing setup, readiness checks, and live Sui execution requirements.
+
 ## API Reference
 
 ### POST /api/v1/intent
@@ -72,7 +74,7 @@ Query task status by ID.
 
 ### GET /health
 
-Health check endpoint.
+Health check endpoint. Returns `503` when the required queue component is unavailable, so demos fail early instead of accepting intents that cannot be processed.
 
 ## Sui Execution Boundary
 

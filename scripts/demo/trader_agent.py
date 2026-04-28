@@ -4,12 +4,13 @@
 import hashlib
 import hmac
 import json
+import os
 import time
 import requests
 
 API_KEY = "trader-agent-key"
-SECRET_KEY = b"trader-secret-key-change-in-prod"
-GATEWAY_URL = "http://localhost:8080"
+SECRET_KEY = os.getenv("HMAC_SECRET_KEY", "dev-secret-key-change-in-prod").encode()
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8080")
 
 def sign_message(task_id: str, timestamp: int, action: str, amount: str) -> str:
     message = f"{task_id}:{timestamp}:{action}:{amount}"
@@ -26,9 +27,6 @@ def submit_trade(amount: str, analyst_report: dict) -> str:
 
     payload = {
         "task_id": task_id,
-        "api_key": API_KEY,
-        "signature": sign_message(task_id, timestamp, "Swap", amount),
-        "timestamp": timestamp,
         "action": "Swap",
         "params": {
             "amount": amount,
@@ -44,7 +42,18 @@ def submit_trade(amount: str, analyst_report: dict) -> str:
         ).decode()
     }
 
-    resp = requests.post(f"{GATEWAY_URL}/api/v1/intent", json=payload)
+    resp = requests.post(
+        f"{GATEWAY_URL}/api/v1/intent",
+        json=payload,
+        headers={
+            "X-API-Key": API_KEY,
+            "X-Signature": sign_message(task_id, timestamp, "Swap", amount),
+            "X-Timestamp": str(timestamp),
+        },
+        timeout=10,
+    )
+    if not resp.ok:
+        raise RuntimeError(f"gateway rejected intent: {resp.status_code} {resp.text}")
     resp.raise_for_status()
     return resp.json()["task_id"]
 
@@ -63,5 +72,5 @@ if __name__ == "__main__":
 
     # Check status
     time.sleep(2)
-    resp = requests.get(f"{GATEWAY_URL}/api/v1/task/{task_id}")
+    resp = requests.get(f"{GATEWAY_URL}/api/v1/task/{task_id}", timeout=10)
     print(f"📦 Task status: {resp.json()}")
