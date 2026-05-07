@@ -1,7 +1,22 @@
-/gateway
+# Go
 *.exe
 *.test
 *.out
+main
+
+# Move build artifacts
+move/build/
+move/.trace
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Env
 .env
-__pycache__/
-*.pyc
+
+# Logs
+*.log

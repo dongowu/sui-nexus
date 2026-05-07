@@ -20,6 +20,7 @@ type Handler struct {
 	signer     *hmac.Signer
 	producer   IntentProducer
 	redisStore *storage.RedisStore
+	hub        *Hub
 }
 
 type componentHealth struct {
@@ -34,11 +35,12 @@ type healthResponse struct {
 	Components map[string]componentHealth `json:"components"`
 }
 
-func NewHandler(signer *hmac.Signer, producer IntentProducer, redisStore *storage.RedisStore) *Handler {
+func NewHandler(signer *hmac.Signer, producer IntentProducer, redisStore *storage.RedisStore, hub *Hub) *Handler {
 	return &Handler{
 		signer:     signer,
 		producer:   producer,
 		redisStore: redisStore,
+		hub:        hub,
 	}
 }
 

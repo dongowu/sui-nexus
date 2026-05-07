@@ -15,6 +15,9 @@ func NewRouter(handler *Handler, signer *hmac.Signer) *gin.Engine {
 	// Health check (no auth)
 	r.GET("/health", handler.HandleHealth)
 
+	// WebSocket (no auth for demo)
+	r.GET("/ws", handler.HandleWebSocket)
+
 	// API v1
 	v1 := r.Group("/api/v1")
 	v1.Use(HMACAuth(signer))

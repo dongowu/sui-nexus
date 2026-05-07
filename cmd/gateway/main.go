@@ -40,8 +40,12 @@ func main() {
 	// Initialize HMAC Signer
 	signer := hmac.NewSigner(cfg.HMACSecretKey, cfg.ReplayWindowSec)
 
+	// Initialize WebSocket Hub
+	hub := gateway.NewHub()
+	go hub.Run()
+
 	// Initialize Handler
-	handler := gateway.NewHandler(signer, producer, redisStore)
+	handler := gateway.NewHandler(signer, producer, redisStore, hub)
 
 	// Initialize Router
 	router := gateway.NewRouter(handler, signer)
@@ -61,7 +65,7 @@ func main() {
 		}
 
 		consumer, err := kafka.NewConsumer(cfg.KafkaBrokers, "sui-nexus-group", "sui-nexus-intents",
-			buildTaskHandler(ptbBuilder, walrusClient, executor, redisStore))
+			buildTaskHandler(ptbBuilder, walrusClient, executor, redisStore, hub))
 		if err != nil {
 			log.Printf("Warning: Kafka consumer failed: %v", err)
 		} else {
@@ -115,6 +119,7 @@ func buildTaskHandler(
 	walrusClient *walrus.Client,
 	executor *ptb.Executor,
 	redisStore *storage.RedisStore,
+	hub *gateway.Hub,
 ) kafka.TaskHandler {
 	return func(ctx context.Context, task *model.Task) error {
 		log.Printf("Processing task %s", task.TaskID)
@@ -157,6 +162,11 @@ func buildTaskHandler(
 		if redisStore != nil {
 			task.Status = model.StatusCompleted
 			redisStore.SaveTask(ctx, task)
+		}
+
+		// Broadcast to WebSocket clients
+		if hub != nil {
+			hub.BroadcastTask(task)
 		}
 
 		return nil

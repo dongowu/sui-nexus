@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sui-Nexus Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0e27; color: #fff; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 30px; color: #4fc3f7; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .card { background: #1a1f3a; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .card h2 { color: #4fc3f7; margin-bottom: 15px; font-size: 18px; }
+        .status { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .status-dot.ready { background: #4caf50; }
+        .status-dot.unavailable { background: #f44336; }
+        .task-list { max-height: 300px; overflow-y: auto; }
+        .task-item { background: #252b4a; padding: 12px; margin-bottom: 10px; border-radius: 4px; border-left: 3px solid #4fc3f7; }
+        .task-item.completed { border-left-color: #4caf50; }
+        .task-item.failed { border-left-color: #f44336; }
+        .task-id { font-family: monospace; font-size: 12px; color: #aaa; }
+        .task-status { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin-left: 10px; }
+        .task-status.pending { background: #ff9800; }
+        .task-status.processing { background: #2196f3; }
+        .task-status.completed { background: #4caf50; }
+        .task-status.failed { background: #f44336; }
+        .tx-link { color: #4fc3f7; text-decoration: none; font-size: 12px; }
+        .tx-link:hover { text-decoration: underline; }
+        .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2a3050; }
+        .metric:last-child { border-bottom: none; }
+        .metric-value { font-weight: bold; color: #4fc3f7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Sui-Nexus Real-Time Dashboard</h1>
+
+        <div class="grid">
+            <div class="card">
+                <h2>System Health</h2>
+                <div id="health-status">Loading...</div>
+            </div>
+
+            <div class="card">
+                <h2>Metrics</h2>
+                <div id="metrics">
+                    <div class="metric"><span>Total Tasks</span><span class="metric-value" id="total-tasks">0</span></div>
+                    <div class="metric"><span>Completed</span><span class="metric-value" id="completed-tasks">0</span></div>
+                    <div class="metric"><span>Failed</span><span class="metric-value" id="failed-tasks">0</span></div>
+                    <div class="metric"><span>Pending</span><span class="metric-value" id="pending-tasks">0</span></div>
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: 1 / -1;">
+                <h2>Recent Tasks</h2>
+                <div class="task-list" id="task-list">
+                    <p style="color: #aaa;">No tasks yet. Submit an intent to see activity.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GATEWAY_URL = 'http://localhost:8080';
+        const WS_URL = 'ws://localhost:8080/ws';
+        const tasks = new Map();
+        let ws = null;
+
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
+            ws.onopen = () => console.log('WebSocket connected');
+            ws.onmessage = (event) => {
+                const task = JSON.parse(event.data);
+                tasks.set(task.task_id, task);
+                updateMetrics();
+                renderTasks();
+            };
+            ws.onerror = (err) => console.error('WebSocket error:', err);
+            ws.onclose = () => {
+                console.log('WebSocket closed, reconnecting...');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${GATEWAY_URL}/health`);
+                const data = await res.json();
+
+                const html = Object.entries(data.components).map(([name, comp]) => `
+                    <div class="status">
+                        <span class="status-dot ${comp.ready ? 'ready' : 'unavailable'}"></span>
+                        <span>${name}: ${comp.ready ? 'Ready' : 'Unavailable'}</span>
+                        ${comp.message ? `<span style="color: #aaa; font-size: 12px;">(${comp.message})</span>` : ''}
+                    </div>
+                `).join('');
+
+                document.getElementById('health-status').innerHTML = html;
+            } catch (err) {
+                document.getElementById('health-status').innerHTML = '<p style="color: #f44336;">Gateway unreachable</p>';
+            }
+        }
+
+        function updateMetrics() {
+            const taskArray = Array.from(tasks.values());
+            document.getElementById('total-tasks').textContent = taskArray.length;
+            document.getElementById('completed-tasks').textContent = taskArray.filter(t => t.status === 'completed').length;
+            document.getElementById('failed-tasks').textContent = taskArray.filter(t => t.status === 'failed').length;
+            document.getElementById('pending-tasks').textContent = taskArray.filter(t => t.status === 'pending' || t.status === 'processing').length;
+        }
+
+        function renderTasks() {
+            const taskArray = Array.from(tasks.values()).sort((a, b) =>
+                new Date(b.created_at) - new Date(a.created_at)
+            ).slice(0, 10);
+
+            if (taskArray.length === 0) {
+                document.getElementById('task-list').innerHTML = '<p style="color: #aaa;">No tasks yet. Submit an intent to see activity.</p>';
+                return;
+            }
+
+            const html = taskArray.map(task => `
+                <div class="task-item ${task.status}">
+                    <div>
+                        <span class="task-id">${task.task_id}</span>
+                        <span class="task-status ${task.status}">${task.status}</span>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 13px;">
+                        Action: ${task.intent?.action || 'N/A'} |
+                        Amount: ${task.intent?.params?.amount || 'N/A'}
+                    </div>
+                    ${task.tx_digest ? `
+                        <div style="margin-top: 8px;">
+                            <a class="tx-link" href="https://suiexplorer.com/txblock/${task.tx_digest}?network=testnet" target="_blank">
+                                View on Sui Explorer →
+                            </a>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+
+            document.getElementById('task-list').innerHTML = html;
+        }
+
+        // Poll for updates
+        setInterval(checkHealth, 3000);
+        checkHealth();
+        connectWebSocket();
+
+        console.log('Dashboard ready. WebSocket connected for real-time updates.');
+    </script>
+</body>
+</html>
