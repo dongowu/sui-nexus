@@ -65,3 +65,8 @@ func (s *RedisStore) UpdateTaskStatus(ctx context.Context, taskID string, status
 func (s *RedisStore) Close() error {
 	return s.client.Close()
 }
+
+// Client exposes the underlying Redis client for custom operations.
+func (s *RedisStore) Client() *redis.Client {
+	return s.client
+}

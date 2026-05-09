@@ -29,7 +29,7 @@ func setupTestRouter() (*gin.Engine, *hmac.Signer) {
 	gin.SetMode(gin.TestMode)
 	signer := hmac.NewSigner("test-secret", 300)
 	handler := &Handler{signer: signer}
-	r := NewRouter(handler, signer)
+	r := NewRouter(handler, signer, nil)
 	return r, signer
 }
 
@@ -37,8 +37,8 @@ func TestHandleIntent_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	signer := hmac.NewSigner("test-secret", 300)
 	producer := &fakeProducer{}
-	handler := NewHandler(signer, producer, nil)
-	r := NewRouter(handler, signer)
+	handler := NewHandler(signer, producer, nil, nil, nil, nil)
+	r := NewRouter(handler, signer, nil)
 
 	taskID := "test-task-001"
 	timestamp := time.Now().Unix()
@@ -212,8 +212,8 @@ func TestHandleHealth(t *testing.T) {
 func TestHandleHealthReportsReadyWhenQueueConfigured(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	signer := hmac.NewSigner("test-secret", 300)
-	handler := NewHandler(signer, &fakeProducer{}, nil)
-	r := NewRouter(handler, signer)
+	handler := NewHandler(signer, &fakeProducer{}, nil, nil, nil, nil)
+	r := NewRouter(handler, signer, nil)
 
 	req, _ := http.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()

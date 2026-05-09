@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Analyst Agent - Simulates an AI that analyzes market data and generates reports."""
+"""Analyst Agent - AI agent that analyzes market data and generates trading reports.
+
+Uses real LLM (OpenAI/Groq) for market analysis.
+Set LLM_PROVIDER and API key via environment variables.
+"""
 
 import hashlib
 import hmac
@@ -12,27 +16,51 @@ API_KEY = "analyst-agent-key"
 SECRET_KEY = os.getenv("HMAC_SECRET_KEY", "dev-secret-key-change-in-prod").encode()
 GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8080")
 
+# Lazy-load LLM client to avoid import errors if not installed
+_llm_client = None
+
+def get_llm_client():
+    """Get or create the LLM client instance."""
+    global _llm_client
+    if _llm_client is None:
+        from llm_client import LLMClient
+        _llm_client = LLMClient()
+    return _llm_client
+
 def sign_message(task_id: str, timestamp: int, action: str, amount: str) -> str:
     message = f"{task_id}:{timestamp}:{action}:{amount}"
     return hmac.new(SECRET_KEY, message.encode(), hashlib.sha256).hexdigest()
 
 def generate_report(news: str) -> dict:
-    """Simulate AI analysis - in production this would call an LLM."""
-    if "hack" in news.lower() or "attack" in news.lower():
+    """Analyze market news using real LLM and return trading recommendation.
+
+    Args:
+        news: Market news text to analyze
+
+    Returns:
+        dict with keys: sentiment, confidence, action, target_tokens, reason
+    """
+    try:
+        client = get_llm_client()
+        return client.analyze_market_news(news)
+    except ImportError:
+        # Fallback to simulated analysis if LLM not available
+        print("⚠️ LLM client not available, using simulated analysis")
+        if "hack" in news.lower() or "attack" in news.lower():
+            return {
+                "sentiment": "bearish",
+                "confidence": 0.85,
+                "action": "sell",
+                "target_tokens": ["SUI", "USDT"],
+                "reason": f"Negative news detected: {news}"
+            }
         return {
-            "sentiment": "bearish",
-            "confidence": 0.85,
-            "action": "sell",
-            "target_tokens": ["SUI", "USDT"],
-            "reason": f"Negative news detected: {news}"
+            "sentiment": "bullish",
+            "confidence": 0.65,
+            "action": "buy",
+            "target_tokens": ["SUI"],
+            "reason": f"Positive news: {news}"
         }
-    return {
-        "sentiment": "bullish",
-        "confidence": 0.65,
-        "action": "buy",
-        "target_tokens": ["SUI"],
-        "reason": f"Positive news: {news}"
-    }
 
 def submit_intent(action: str, amount: str, context: dict) -> str:
     import uuid

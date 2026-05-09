@@ -5,7 +5,9 @@ go 1.25.0
 require (
 	github.com/IBM/sarama v1.47.0
 	github.com/block-vision/sui-go-sdk v1.2.1
+	github.com/ethereum/go-ethereum v1.14.11
 	github.com/gin-gonic/gin v1.12.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/stretchr/testify v1.11.1
 )
@@ -29,7 +31,6 @@ require (
 	github.com/go-playground/validator/v10 v10.30.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
@@ -50,6 +51,7 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
+	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect

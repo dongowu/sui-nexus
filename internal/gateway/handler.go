@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sui-nexus/gateway/internal/config"
 	"github.com/sui-nexus/gateway/internal/model"
 	"github.com/sui-nexus/gateway/internal/storage"
+	"github.com/sui-nexus/gateway/internal/gateway/zklogin"
 	"github.com/sui-nexus/gateway/pkg/hmac"
 )
 
@@ -21,6 +23,12 @@ type Handler struct {
 	producer   IntentProducer
 	redisStore *storage.RedisStore
 	hub        *Hub
+	nlpClient  *NLPClient
+
+	// zkLogin fields
+	config            *config.Config
+	zkLoginProvider   *zklogin.GoogleOAuthProvider // supports Google for now
+	ephemeralKeyMgr  *zklogin.EphemeralKeyManager
 }
 
 type componentHealth struct {
@@ -35,13 +43,47 @@ type healthResponse struct {
 	Components map[string]componentHealth `json:"components"`
 }
 
-func NewHandler(signer *hmac.Signer, producer IntentProducer, redisStore *storage.RedisStore, hub *Hub) *Handler {
-	return &Handler{
+func NewHandler(signer *hmac.Signer, producer IntentProducer, redisStore *storage.RedisStore, hub *Hub, nlpClient *NLPClient, cfg *config.Config) *Handler {
+	handler := &Handler{
 		signer:     signer,
 		producer:   producer,
 		redisStore: redisStore,
 		hub:        hub,
+		nlpClient:  nlpClient,
+		config:     cfg,
 	}
+
+	// Initialize zkLogin if enabled
+	if cfg != nil && cfg.ZkLoginEnabled {
+		handler.initZkLogin(cfg)
+	}
+
+	return handler
+}
+
+// GetEphemeralKeyManager exposes the ephemeral key manager for use by AgentWalletHandler.
+func (h *Handler) GetEphemeralKeyManager() *zklogin.EphemeralKeyManager {
+	return h.ephemeralKeyMgr
+}
+
+// initZkLogin initializes the zkLogin provider and ephemeral key manager.
+func (h *Handler) initZkLogin(cfg *config.Config) {
+	switch cfg.ZkLoginProvider {
+	case "google":
+		h.zkLoginProvider = zklogin.NewGoogleOAuthProvider(
+			cfg.ZkLoginClientID,
+			cfg.ZkLoginClientSecret,
+			cfg.ZkLoginRedirectURL,
+		)
+	case "twitch":
+		// h.zkLoginProvider = zklogin.NewTwitchOAuthProvider(...)
+		log.Println("Twitch zkLogin not yet implemented")
+	default:
+		log.Printf("Unknown zkLogin provider: %s", cfg.ZkLoginProvider)
+		return
+	}
+	h.ephemeralKeyMgr = zklogin.NewEphemeralKeyManager(cfg.ZkLoginMaxEpoch)
+	log.Printf("zkLogin initialized with provider: %s", cfg.ZkLoginProvider)
 }
 
 func (h *Handler) HandleIntent(c *gin.Context) {
@@ -187,4 +229,191 @@ func (h *Handler) HandleHealth(c *gin.Context) {
 		Ready:      queueReady,
 		Components: components,
 	})
+}
+
+// HandleParseIntent parses natural language intent into structured format via NLP service.
+func (h *Handler) HandleParseIntent(c *gin.Context) {
+	if h.nlpClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "NLP service is not configured",
+		})
+		return
+	}
+
+	var req struct {
+		Text string `json:"text" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx := context.Background()
+	result, err := h.nlpClient.ParseIntent(ctx, req.Text)
+	if err != nil {
+		log.Printf("NLP parsing failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result.Error != "" {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"error": result.Error,
+			"action": result.Action,
+			"params": result.Params,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"action": result.Action,
+		"params": result.Params,
+	})
+}
+
+// HandleZkLoginAuth handles the zkLogin authentication flow.
+// GET /api/v1/auth/zklogin - initiate OAuth flow (redirect to Google)
+// GET /api/v1/auth/zklogin/callback - OAuth callback (exchange code, create session)
+func (h *Handler) HandleZkLoginAuth(c *gin.Context) {
+	if h.zkLoginProvider == nil || h.ephemeralKeyMgr == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "zkLogin is not configured"})
+		return
+	}
+
+	code := c.Query("code")
+	state := c.Query("state")
+
+	if code == "" {
+		// Step 1: Redirect to OAuth provider
+		authURL := h.zkLoginProvider.GetAuthURL(state)
+		log.Printf("Redirecting to OAuth: %s", authURL)
+		c.Redirect(http.StatusTemporaryRedirect, authURL)
+		return
+	}
+
+	// Step 2: Handle OAuth callback
+	ctx := context.Background()
+
+	// Exchange code for JWT
+	jwt, err := h.zkLoginProvider.ExchangeCode(ctx, code)
+	if err != nil {
+		log.Printf("OAuth token exchange failed: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "OAuth exchange failed"})
+		return
+	}
+
+	// Get user info from JWT
+	userInfo, err := h.zkLoginProvider.GetUserInfo(ctx, jwt)
+	if err != nil {
+		log.Printf("Failed to get user info: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Failed to get user info"})
+		return
+	}
+
+	// Create zkLogin session (generates ephemeral key, salt, randomness)
+	// The actual ZK proof and address derivation happens client-side via @mysten/zklogin
+	sessionKey, sessionToken, err := h.ephemeralKeyMgr.CreateSession(
+		jwt,
+		userInfo.Subject,
+		userInfo.Email,
+		"https://accounts.google.com",
+	)
+	if err != nil {
+		log.Printf("Session creation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Session creation failed"})
+		return
+	}
+
+	// Set audience from config
+	session := h.ephemeralKeyMgr.GetSessionForToken(sessionToken)
+	if session != nil {
+		session.Audience = h.config.ZkLoginClientID
+	}
+
+	log.Printf("zkLogin session created: email=%s, session=%s...", userInfo.Email, sessionToken[:16])
+
+	// Return zkLogin session params — client uses these with @mysten/zklogin
+	// to generate the proof and derive the Sui address
+	c.JSON(http.StatusOK, gin.H{
+		"session_token":     sessionToken,
+		"jwt":               jwt,
+		"salt":              sessionKey.Salt,
+		"jwt_randomness":    sessionKey.JwtRandomness,
+		"key_claim_name":    "sub",
+		"key_claim_value":   userInfo.Subject,
+		"audience":          h.config.ZkLoginClientID,
+		"issuer":            "https://accounts.google.com",
+		"ephemeral_pub_key": sessionKey.PublicKey,
+		"max_epoch":         sessionKey.MaxEpoch,
+		"email":             userInfo.Email,
+		"expires_at":        sessionKey.IssuedAt.Add(24 * time.Hour * time.Duration(sessionKey.MaxEpoch)).Unix(),
+		// Client must call POST /api/v1/auth/zklogin/submit-proof after proof gen
+	})
+}
+
+// HandleSubmitProof receives the zkLogin proof from the client (generated by @mysten/zklogin).
+// POST /api/v1/auth/zklogin/submit-proof
+func (h *Handler) HandleSubmitProof(c *gin.Context) {
+	if h.ephemeralKeyMgr == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "zkLogin is not configured"})
+		return
+	}
+
+	var req zklogin.ProofSubmission
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// The client must send back the session token so we can match the session
+	sessionToken := c.GetHeader("X-Session-Token")
+	if sessionToken == "" {
+		// Also accept in body
+		var body struct {
+			SessionToken string `json:"session_token"`
+		}
+		c.ShouldBindJSON(&body)
+		sessionToken = body.SessionToken
+	}
+	if sessionToken == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "session_token is required"})
+		return
+	}
+
+	if err := h.ephemeralKeyMgr.SubmitProof(sessionToken, req.UserAddress, req.AddressSeed, req.Proof); err != nil {
+		log.Printf("Proof submission failed: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.Printf("zkLogin proof submitted: address=%s", req.UserAddress)
+
+	c.JSON(http.StatusOK, gin.H{
+		"valid":        true,
+		"user_address": req.UserAddress,
+	})
+}
+
+// HandleZkLoginVerify verifies a zkLogin session token.
+func (h *Handler) HandleZkLoginVerify(c *gin.Context) {
+	if h.ephemeralKeyMgr == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "zkLogin is not configured"})
+		return
+	}
+
+	var req struct {
+		UserAddress  string `json:"user_address" binding:"required"`
+		SessionToken string `json:"session_token" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !h.ephemeralKeyMgr.IsValid(req.UserAddress, req.SessionToken) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired session"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"valid": true, "user_address": req.UserAddress})
 }

@@ -229,6 +229,191 @@ func prorateAmount(amount, basisPoints uint64) uint64 {
 	return shareAmount
 }
 
+// ────────────────────────────────────────────────────────────
+// Agent Wallet PTB builders
+// ────────────────────────────────────────────────────────────
+
+// BuildAgentWalletCreate builds a PTB to create a new AgentWallet.
+func (b *Builder) BuildAgentWalletCreate(
+	agentAddress string,
+	budgetCapMist uint64,
+	allowedProtocols []string,
+	timeEndEpoch uint64,
+	packageID string,
+) (*PTB, error) {
+	if strings.TrimSpace(agentAddress) == "" {
+		return nil, fmt.Errorf("agent address is required")
+	}
+	if budgetCapMist == 0 {
+		return nil, fmt.Errorf("budget cap must be greater than zero")
+	}
+	if strings.TrimSpace(packageID) == "" {
+		return nil, fmt.Errorf("package id is required")
+	}
+
+	return &PTB{
+		Action:    "CreateWallet",
+		GasBudget: b.gasBudget,
+		MoveCall: &MoveCallPlan{
+			PackageObjectID: packageID,
+			Module:          "agent_wallet",
+			Function:        "create_wallet",
+			Arguments: []interface{}{
+				agentAddress,
+				fmt.Sprintf("%d", budgetCapMist),
+				allowedProtocols,
+				fmt.Sprintf("%d", timeEndEpoch),
+			},
+		},
+	}, nil
+}
+
+// BuildAgentWalletExecuteTrade builds a PTB for an agent to execute a trade
+// through the wallet (policy check + budget deduct + coin split).
+func (b *Builder) BuildAgentWalletExecuteTrade(
+	walletID string,
+	amountMist uint64,
+	protocol string,
+	description string,
+	packageID string,
+) (*PTB, error) {
+	if strings.TrimSpace(walletID) == "" {
+		return nil, fmt.Errorf("wallet id is required")
+	}
+	if amountMist == 0 {
+		return nil, fmt.Errorf("amount must be greater than zero")
+	}
+	if strings.TrimSpace(protocol) == "" {
+		return nil, fmt.Errorf("protocol is required")
+	}
+	if strings.TrimSpace(packageID) == "" {
+		return nil, fmt.Errorf("package id is required")
+	}
+
+	return &PTB{
+		Action:    "ExecuteTrade",
+		GasBudget: b.gasBudget,
+		MoveCall: &MoveCallPlan{
+			PackageObjectID: packageID,
+			Module:          "agent_wallet",
+			Function:        "execute_trade",
+			Arguments: []interface{}{
+				walletID,
+				fmt.Sprintf("%d", amountMist),
+				protocol,
+				description,
+			},
+		},
+	}, nil
+}
+
+// BuildAgentWalletRevoke builds a PTB for the owner to revoke a wallet.
+func (b *Builder) BuildAgentWalletRevoke(
+	walletID string,
+	packageID string,
+) (*PTB, error) {
+	if strings.TrimSpace(walletID) == "" {
+		return nil, fmt.Errorf("wallet id is required")
+	}
+	if strings.TrimSpace(packageID) == "" {
+		return nil, fmt.Errorf("package id is required")
+	}
+
+	return &PTB{
+		Action:    "RevokeWallet",
+		GasBudget: b.gasBudget,
+		MoveCall: &MoveCallPlan{
+			PackageObjectID: packageID,
+			Module:          "agent_wallet",
+			Function:        "revoke",
+			Arguments: []interface{}{
+				walletID,
+			},
+		},
+	}, nil
+}
+
+// BuildAgentWalletDeposit builds a PTB for the owner to deposit SUI into a wallet.
+func (b *Builder) BuildAgentWalletDeposit(
+	walletID string,
+	coinID string,
+	packageID string,
+) (*PTB, error) {
+	if strings.TrimSpace(walletID) == "" {
+		return nil, fmt.Errorf("wallet id is required")
+	}
+	if strings.TrimSpace(coinID) == "" {
+		return nil, fmt.Errorf("coin id is required")
+	}
+	if strings.TrimSpace(packageID) == "" {
+		return nil, fmt.Errorf("package id is required")
+	}
+
+	return &PTB{
+		Action:    "DepositWallet",
+		GasBudget: b.gasBudget,
+		MoveCall: &MoveCallPlan{
+			PackageObjectID: packageID,
+			Module:          "agent_wallet",
+			Function:        "deposit",
+			Arguments: []interface{}{
+				walletID,
+				coinID,
+			},
+		},
+	}, nil
+}
+
+// BuildAgentWalletExecuteDeepBook builds a PTB for placing a limit order on
+// DeepBook V3. Called after execute_trade succeeds.
+func (b *Builder) BuildAgentWalletExecuteDeepBook(
+	poolID string,
+	balanceManagerID string,
+	tradeProofID string,
+	clientOrderID uint64,
+	orderType uint8,
+	price uint64,
+	quantity uint64,
+	isBid bool,
+	expireTimestamp uint64,
+	deepBookPackageID string,
+) (*PTB, error) {
+	if strings.TrimSpace(poolID) == "" {
+		return nil, fmt.Errorf("deepbook pool id is required")
+	}
+	if strings.TrimSpace(deepBookPackageID) == "" {
+		return nil, fmt.Errorf("deepbook package id is required")
+	}
+
+	return &PTB{
+		Action:    "DeepBookOrder",
+		GasBudget: b.gasBudget,
+		MoveCall: &MoveCallPlan{
+			PackageObjectID: deepBookPackageID,
+			Module:          "clob",
+			Function:        "place_limit_order",
+			TypeArguments: []interface{}{
+				"0x2::sui::SUI", // BaseAsset
+				"0x2::sui::SUI", // QuoteAsset - placeholder, replace with USDC
+			},
+			Arguments: []interface{}{
+				poolID,
+				balanceManagerID,
+				tradeProofID,
+				fmt.Sprintf("%d", clientOrderID),
+				fmt.Sprintf("%d", orderType),
+				"0", // self_matching_option: cancel_oldest
+				fmt.Sprintf("%d", price),
+				fmt.Sprintf("%d", quantity),
+				fmt.Sprintf("%v", isBid),
+				"true", // pay_with_deep
+				fmt.Sprintf("%d", expireTimestamp),
+				"0x6",  // Clock shared object address on Sui
+			},
+		},
+	}, nil
+}
+
 func buildMoveCallPlan(params model.ActionParams) (*MoveCallPlan, error) {
 	packageObjectID := strings.TrimSpace(params.MovePackageObjectID)
 	module := strings.TrimSpace(params.MoveModule)

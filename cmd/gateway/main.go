@@ -44,25 +44,53 @@ func main() {
 	hub := gateway.NewHub()
 	go hub.Run()
 
+	// Initialize NLP Client (optional - gateway works without it)
+	var nlpClient *gateway.NLPClient
+	nlpEndpoint := cfg.NLPServiceEndpoint
+	if nlpEndpoint != "" {
+		nlpClient = gateway.NewNLPClient(nlpEndpoint)
+		log.Printf("NLP client configured: %s", nlpEndpoint)
+	}
+
+	// Initialize PTB Builder and Executor (shared across handler and consumer)
+	ptbBuilder := ptb.NewBuilder(cfg.SuiGasBudget)
+	executor, err := ptb.NewSDKExecutor(cfg.SuiRPCURL, ptb.SDKExecutorConfig{
+		SignerMnemonic:   cfg.SuiSignerMnemonic,
+		SignerPrivateKey: cfg.SuiSignerPrivateKey,
+		GasObjectID:      cfg.SuiGasObjectID,
+	})
+	if err != nil {
+		log.Printf("Warning: Sui SDK executor not configured: %v (signed transaction bytes only)", err)
+		executor = ptb.NewExecutor(cfg.SuiRPCURL)
+	}
+
 	// Initialize Handler
-	handler := gateway.NewHandler(signer, producer, redisStore, hub)
+	handler := gateway.NewHandler(signer, producer, redisStore, hub, nlpClient, cfg)
+
+	// Initialize AgentWalletHandler if enabled
+	var agentWalletHandler *gateway.AgentWalletHandler
+	if cfg.AgentWalletEnabled {
+		if cfg.AgentWalletPackageID == "" {
+			log.Println("Warning: AGENT_WALLET_PACKAGE_ID not set, agent wallet disabled")
+		} else {
+			agentWalletHandler = gateway.NewAgentWalletHandler(
+				cfg,
+				executor,
+				ptbBuilder,
+				redisStore,
+				hub,
+				handler.GetEphemeralKeyManager(),
+			)
+			log.Println("Agent Wallet handler initialized")
+		}
+	}
 
 	// Initialize Router
-	router := gateway.NewRouter(handler, signer)
+	router := gateway.NewRouter(handler, signer, agentWalletHandler)
 
 	// Start Kafka Consumer (PTB Builder loop)
 	if producer != nil {
-		ptbBuilder := ptb.NewBuilder(cfg.SuiGasBudget)
 		walrusClient := walrus.NewClient(cfg.WalrusAPIURL)
-		executor, err := ptb.NewSDKExecutor(cfg.SuiRPCURL, ptb.SDKExecutorConfig{
-			SignerMnemonic:   cfg.SuiSignerMnemonic,
-			SignerPrivateKey: cfg.SuiSignerPrivateKey,
-			GasObjectID:      cfg.SuiGasObjectID,
-		})
-		if err != nil {
-			log.Printf("Warning: Sui SDK executor not configured: %v (signed transaction bytes only)", err)
-			executor = ptb.NewExecutor(cfg.SuiRPCURL)
-		}
 
 		consumer, err := kafka.NewConsumer(cfg.KafkaBrokers, "sui-nexus-group", "sui-nexus-intents",
 			buildTaskHandler(ptbBuilder, walrusClient, executor, redisStore, hub))
@@ -151,7 +179,6 @@ func buildTaskHandler(
 		digest, err := executor.ExecutePTB(ctx, ptbTxn)
 		if err != nil {
 			log.Printf("PTB execution failed for task %s: %v", task.TaskID, err)
-			// Retry logic would go here
 			return err
 		}
 
