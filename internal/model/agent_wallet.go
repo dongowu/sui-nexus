@@ -47,10 +47,11 @@ type CreateWalletRequest struct {
 
 // AgentExecuteRequest is an agent's request to execute a trade within policy.
 type AgentExecuteRequest struct {
-	WalletID    string `json:"wallet_id" binding:"required"`
-	AmountMist  uint64 `json:"amount_mist" binding:"required"`
-	Protocol    string `json:"protocol" binding:"required"`
-	Description string `json:"description"`
+	WalletID      string `json:"wallet_id" binding:"required"`
+	AmountMist    uint64 `json:"amount_mist" binding:"required"`
+	Protocol      string `json:"protocol" binding:"required"`
+	ExpectedPrice uint64 `json:"expected_price"` // Guardian: expected price in MIST (0 = skip check)
+	Description   string `json:"description"`
 
 	// zkLogin session
 	SessionToken string `json:"session_token" binding:"required"`
@@ -66,13 +67,14 @@ type RevokeWalletRequest struct {
 
 // WalletResponse is the standard API response for wallet operations.
 type WalletResponse struct {
-	WalletID     string          `json:"wallet_id,omitempty"`
-	Owner        string          `json:"owner,omitempty"`
-	AgentAddress string          `json:"agent_address,omitempty"`
-	Policy       *WalletPolicy   `json:"policy,omitempty"`
-	IsActive     bool            `json:"is_active"`
-	BalanceMist  uint64          `json:"balance_mist"`
-	ActivityLog  []ActivityEntry `json:"activity_log,omitempty"`
-	TxDigest     string          `json:"tx_digest,omitempty"`
-	Error        *ErrorDetail    `json:"error,omitempty"`
+	WalletID          string          `json:"wallet_id,omitempty"`
+	Owner             string          `json:"owner,omitempty"`
+	AgentAddress      string          `json:"agent_address,omitempty"`
+	Policy            *WalletPolicy   `json:"policy,omitempty"`
+	IsActive          bool            `json:"is_active"`
+	BalanceMist       uint64          `json:"balance_mist"`
+	ActivityLog       []ActivityEntry `json:"activity_log,omitempty"`
+	TxDigest          string          `json:"tx_digest,omitempty"`
+	DeepBookTxDigest  string          `json:"deepbook_tx_digest,omitempty"`
+	Error             *ErrorDetail    `json:"error,omitempty"`
 }

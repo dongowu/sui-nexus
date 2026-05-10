@@ -166,6 +166,7 @@ def step3_agent_executes_trade(session: dict, wallet_id: str) -> bool:
         "wallet_id": wallet_id,
         "amount_mist": TRADE_AMOUNT_MIST,
         "protocol": DEEPBOOK_PACKAGE_ID,
+        "expected_price": 1000,  # Guardian: expected execution price (0 = skip)
         "description": "Buy SUI/USDC limit order on DeepBook",
         "session_token": session.get("session_token", ""),
         "user_address": session.get("user_address", ""),
@@ -199,6 +200,7 @@ def step3b_agent_exceeds_budget(session: dict, wallet_id: str):
         "wallet_id": wallet_id,
         "amount_mist": OVERSPEND_AMOUNT_MIST,
         "protocol": DEEPBOOK_PACKAGE_ID,
+        "expected_price": 1000,
         "description": "Attempted overspend on DeepBook",
         "session_token": session.get("session_token", ""),
         "user_address": session.get("user_address", ""),

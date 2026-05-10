@@ -272,13 +272,18 @@ func (b *Builder) BuildAgentWalletCreate(
 // through the wallet (policy check + budget deduct + coin split).
 func (b *Builder) BuildAgentWalletExecuteTrade(
 	walletID string,
+	agentAddr string,
 	amountMist uint64,
 	protocol string,
+	expectedPrice uint64,
 	description string,
 	packageID string,
 ) (*PTB, error) {
 	if strings.TrimSpace(walletID) == "" {
 		return nil, fmt.Errorf("wallet id is required")
+	}
+	if strings.TrimSpace(agentAddr) == "" {
+		return nil, fmt.Errorf("agent address is required")
 	}
 	if amountMist == 0 {
 		return nil, fmt.Errorf("amount must be greater than zero")
@@ -299,8 +304,10 @@ func (b *Builder) BuildAgentWalletExecuteTrade(
 			Function:        "execute_trade",
 			Arguments: []interface{}{
 				walletID,
+				agentAddr,
 				fmt.Sprintf("%d", amountMist),
 				protocol,
+				fmt.Sprintf("%d", expectedPrice),
 				description,
 			},
 		},
