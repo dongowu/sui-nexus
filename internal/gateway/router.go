@@ -46,7 +46,7 @@ func NewRouter(handler *Handler, signer *hmac.Signer, agentWalletHandler *AgentW
 	}
 
 	// NLP intent parsing (no auth for demo)
-	v1.POST("/parse", handler.HandleParseIntent)
+	r.POST("/api/v1/parse", handler.HandleParseIntent)
 
 	return r
 }

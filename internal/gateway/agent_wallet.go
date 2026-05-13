@@ -67,7 +67,6 @@ func (h *AgentWalletHandler) HandleCreateWallet(c *gin.Context) {
 
 	packageID := h.config.AgentWalletPackageID
 	if packageID == "" {
-		packageID = h.config.SuiSignerPrivateKey // fallback: use published package id
 		c.JSON(http.StatusInternalServerError, model.WalletResponse{
 			Error: &model.ErrorDetail{Code: "ERR_CONFIG", Message: "agent wallet package id not configured"},
 		})

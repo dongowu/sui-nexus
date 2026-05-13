@@ -1,6 +1,7 @@
 module sui_nexus::agent_memory {
-    use sui::object::UID;
-    use sui::tx_context::TxContext;
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
     use std::string::String;
 
     /// Stores AI agent context on-chain with Walrus blob reference

@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -52,7 +53,7 @@ func Load() *Config {
 		SuiGasObjectID:       getEnv("SUI_GAS_OBJECT_ID", ""),
 		SuiGasBudget:         gasBudget,
 		WalrusAPIURL:         getEnv("WALRUS_API_URL", "https://walrus.testnet.sui.io"),
-		KafkaBrokers:         []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
+		KafkaBrokers:         parseKafkaBrokers(),
 		RedisAddr:            getEnv("REDIS_ADDR", "localhost:6379"),
 		HMACSecretKey:        getEnv("HMAC_SECRET_KEY", "dev-secret-key-change-in-prod"),
 		ReplayWindowSec:      replayWindow,
@@ -87,4 +88,20 @@ func parseUintEnv(key string, defaultVal uint64) uint64 {
 		return defaultVal
 	}
 	return parsed
+}
+
+func parseKafkaBrokers() []string {
+	raw := getEnv("KAFKA_BROKERS", "localhost:9092")
+	parts := strings.Split(raw, ",")
+	var result []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	if len(result) == 0 {
+		return []string{"localhost:9092"}
+	}
+	return result
 }
