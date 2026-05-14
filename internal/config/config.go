@@ -18,6 +18,7 @@ type Config struct {
 	RedisAddr           string
 	HMACSecretKey       string
 	ReplayWindowSec     int64
+	HackathonDemoMode   bool
 
 	// NLP service configuration
 	NLPServiceEndpoint string
@@ -43,8 +44,13 @@ func Load() *Config {
 	replayWindow, _ := strconv.ParseInt(getEnv("REPLAY_WINDOW_SEC", "300"), 10, 64)
 	gasBudget := parseUintEnv("SUI_GAS_BUDGET", 10_000_000)
 	maxEpoch, _ := strconv.ParseInt(getEnv("ZKLOGIN_MAX_EPOCH", "30"), 10, 64)
+	hackathonDemoMode := os.Getenv("HACKATHON_DEMO_MODE") == "true"
 	zkLoginEnabled := os.Getenv("ZKLOGIN_ENABLED") == "true"
-	agentWalletEnabled := os.Getenv("AGENT_WALLET_ENABLED") == "true"
+	agentWalletEnabled := os.Getenv("AGENT_WALLET_ENABLED") == "true" || hackathonDemoMode
+	agentWalletPackageID := getEnv("AGENT_WALLET_PACKAGE_ID", "")
+	if hackathonDemoMode && agentWalletPackageID == "" {
+		agentWalletPackageID = "0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d"
+	}
 	return &Config{
 		ServerPort:           getEnv("SERVER_PORT", "8080"),
 		SuiRPCURL:            getEnv("SUI_RPC_URL", "https://fullnode.testnet.sui.io"),
@@ -57,15 +63,16 @@ func Load() *Config {
 		RedisAddr:            getEnv("REDIS_ADDR", "localhost:6379"),
 		HMACSecretKey:        getEnv("HMAC_SECRET_KEY", "dev-secret-key-change-in-prod"),
 		ReplayWindowSec:      replayWindow,
+		HackathonDemoMode:    hackathonDemoMode,
 		NLPServiceEndpoint:   getEnv("NLP_SERVICE_ENDPOINT", "http://localhost:8081"),
 		ZkLoginEnabled:       zkLoginEnabled,
 		ZkLoginProvider:      getEnv("ZKLOGIN_PROVIDER", "google"),
 		ZkLoginClientID:      getEnv("ZKLOGIN_CLIENT_ID", ""),
-		ZkLoginClientSecret: getEnv("ZKLOGIN_CLIENT_SECRET", ""),
-		ZkLoginRedirectURL:  getEnv("ZKLOGIN_REDIRECT_URL", "http://localhost:8080/api/v1/auth/zklogin/callback"),
+		ZkLoginClientSecret:  getEnv("ZKLOGIN_CLIENT_SECRET", ""),
+		ZkLoginRedirectURL:   getEnv("ZKLOGIN_REDIRECT_URL", "http://localhost:8080/api/v1/auth/zklogin/callback"),
 		ZkLoginMaxEpoch:      maxEpoch,
 		AgentWalletEnabled:   agentWalletEnabled,
-		AgentWalletPackageID: getEnv("AGENT_WALLET_PACKAGE_ID", ""),
+		AgentWalletPackageID: agentWalletPackageID,
 		DeepBookPackageID:    getEnv("DEEPBOOK_PACKAGE_ID", ""),
 		DeepBookPoolID:       getEnv("DEEPBOOK_POOL_ID", ""),
 	}

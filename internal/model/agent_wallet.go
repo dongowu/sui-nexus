@@ -6,10 +6,10 @@ package model
 
 // WalletPolicy defines the spending policy for an agent wallet.
 type WalletPolicy struct {
-	BudgetCapMist   uint64   `json:"budget_cap_mist"`
-	BudgetSpentMist uint64   `json:"budget_spent_mist"`
-	TimeStart       uint64   `json:"time_start"`
-	TimeEnd         uint64   `json:"time_end"`
+	BudgetCapMist    uint64   `json:"budget_cap_mist"`
+	BudgetSpentMist  uint64   `json:"budget_spent_mist"`
+	TimeStart        uint64   `json:"time_start"`
+	TimeEnd          uint64   `json:"time_end"`
 	AllowedProtocols []string `json:"allowed_protocols"`
 }
 
@@ -67,14 +67,22 @@ type RevokeWalletRequest struct {
 
 // WalletResponse is the standard API response for wallet operations.
 type WalletResponse struct {
-	WalletID          string          `json:"wallet_id,omitempty"`
-	Owner             string          `json:"owner,omitempty"`
-	AgentAddress      string          `json:"agent_address,omitempty"`
-	Policy            *WalletPolicy   `json:"policy,omitempty"`
-	IsActive          bool            `json:"is_active"`
-	BalanceMist       uint64          `json:"balance_mist"`
-	ActivityLog       []ActivityEntry `json:"activity_log,omitempty"`
-	TxDigest          string          `json:"tx_digest,omitempty"`
-	DeepBookTxDigest  string          `json:"deepbook_tx_digest,omitempty"`
-	Error             *ErrorDetail    `json:"error,omitempty"`
+	WalletID         string          `json:"wallet_id,omitempty"`
+	Owner            string          `json:"owner,omitempty"`
+	AgentAddress     string          `json:"agent_address,omitempty"`
+	Policy           *WalletPolicy   `json:"policy,omitempty"`
+	IsActive         bool            `json:"is_active"`
+	BalanceMist      uint64          `json:"balance_mist"`
+	ActivityLog      []ActivityEntry `json:"activity_log,omitempty"`
+	TxDigest         string          `json:"tx_digest,omitempty"`
+	DeepBookTxDigest string          `json:"deepbook_tx_digest,omitempty"`
+	Guardian         *GuardianReport `json:"guardian,omitempty"`
+	Error            *ErrorDetail    `json:"error,omitempty"`
+}
+
+// GuardianReport explains the pre-flight risk decision for judge-visible demos.
+type GuardianReport struct {
+	Passed   bool   `json:"passed"`
+	RiskType string `json:"risk_type,omitempty"`
+	Message  string `json:"message,omitempty"`
 }

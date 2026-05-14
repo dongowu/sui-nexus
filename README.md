@@ -223,6 +223,18 @@ Trader Agent                 │                    │                    │
 
 ## Track Submissions
 
+### One-Command Judge Demo
+
+Run the product locally without Kafka, Redis, zkLogin OAuth credentials, or Sui private keys:
+
+```bash
+HACKATHON_DEMO_MODE=true ./scripts/demo/run_agent_wallet_demo.sh
+```
+
+`HACKATHON_DEMO_MODE` is an explicit judge-friendly simulation path. It keeps the same HTTP API, PTB builder, Move-call plans, wallet policy cache, Guardian checks, WebSocket stream, and Walrus memory references, but uses deterministic local digests instead of submitting live Sui transactions. The live testnet path remains available by disabling demo mode and providing Kafka, Redis, zkLogin, signer, gas coin, and package configuration.
+
+Open `web/dashboard.html` after the gateway starts to use the interactive judge console.
+
 ### Track 1: Agentic Web — "Intent Engine + Agent Wallet with zkLogin"
 
 **Key Demo**: `scripts/demo/agent_wallet_demo.py`

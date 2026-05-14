@@ -23,3 +23,15 @@ func TestLoadDefaultsSuiGasBudget(t *testing.T) {
 
 	assert.Equal(t, uint64(10_000_000), cfg.SuiGasBudget)
 }
+
+func TestLoadHackathonDemoModeEnablesAgentWalletWithDeployedPackage(t *testing.T) {
+	t.Setenv("HACKATHON_DEMO_MODE", "true")
+	t.Setenv("AGENT_WALLET_ENABLED", "")
+	t.Setenv("AGENT_WALLET_PACKAGE_ID", "")
+
+	cfg := Load()
+
+	assert.True(t, cfg.HackathonDemoMode)
+	assert.True(t, cfg.AgentWalletEnabled)
+	assert.Equal(t, "0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d", cfg.AgentWalletPackageID)
+}

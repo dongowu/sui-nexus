@@ -30,6 +30,20 @@
 
 ## 演示前的环境准备
 
+### 评委一键演示（推荐）
+
+```bash
+HACKATHON_DEMO_MODE=true ./scripts/demo/run_agent_wallet_demo.sh
+```
+
+然后打开 `web/dashboard.html`，依次点击：
+
+1. `Create Agent Wallet`
+2. `Execute Safe Trade`
+3. `Attempt Overspend`
+
+这个模式不需要 Kafka、Redis、zkLogin、Sui 私钥或 gas coin。它会明确返回 `demo-*` digest，用于展示产品闭环；真实 testnet package 地址和 live 执行路径仍保留在 README 和配置中。
+
 ```bash
 # 1. 启动依赖服务
 docker run -d --name kafka -p 9092:9092 apache/kafka

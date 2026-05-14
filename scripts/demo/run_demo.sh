@@ -3,6 +3,8 @@ set -euo pipefail
 
 GATEWAY_URL="${GATEWAY_URL:-http://localhost:8080}"
 START_GATEWAY="${START_GATEWAY:-1}"
+export HACKATHON_DEMO_MODE="${HACKATHON_DEMO_MODE:-true}"
+export AGENT_WALLET_ENABLED="${AGENT_WALLET_ENABLED:-true}"
 GATEWAY_PID=""
 
 cleanup() {
@@ -38,7 +40,7 @@ echo ""
 
 if [[ "${START_GATEWAY}" == "1" ]]; then
   require_cmd go
-  echo "Step 1: Starting Gateway (in background)..."
+  echo "Step 1: Starting Gateway (HACKATHON_DEMO_MODE=${HACKATHON_DEMO_MODE})..."
   go run cmd/gateway/main.go &
   GATEWAY_PID=$!
   sleep 3
@@ -54,7 +56,7 @@ if [[ -z "${HEALTH_BODY}" ]]; then
 fi
 echo "${HEALTH_BODY}"
 if ! echo "${HEALTH_BODY}" | python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin).get("ready") else 1)'; then
-  echo "Gateway is not ready. Kafka must be configured before /api/v1/intent will accept demo tasks." >&2
+  echo "Gateway is not ready. Enable HACKATHON_DEMO_MODE=true or configure Kafka before /api/v1/intent will accept demo tasks." >&2
   exit 1
 fi
 

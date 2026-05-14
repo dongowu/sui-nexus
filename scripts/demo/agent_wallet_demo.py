@@ -48,7 +48,21 @@ def ok(result, label):
     return True
 
 def explorer(digest):
+    if digest.startswith("demo-"):
+        return "local demo digest (real testnet package is listed in README)"
     return f"https://suiexplorer.com/txblock/{digest}?network=testnet"
+
+def print_tx(label, digest):
+    print(f"    {label}:  {digest}")
+    print(f"    Explorer:   {explorer(digest)}")
+
+def verify_zklogin(addr, token):
+    if token == "demo-session-token":
+        return True
+    r = post("/api/v1/auth/zklogin/verify", {
+        "user_address": addr, "session_token": token,
+    })
+    return bool(r.get("valid"))
 
 # ── Step 1: Owner creates AgentWallet ──
 def step1(agent_addr):
@@ -85,15 +99,13 @@ def step2():
     token = os.getenv("DEMO_ZKLOGIN_TOKEN", "")
 
     if addr and token:
-        r = post("/api/v1/auth/zklogin/verify", {
-            "user_address": addr, "session_token": token,
-        })
-        if r.get("valid"):
+        if verify_zklogin(addr, token):
             print(f"  ✓ zkLogin session verified: {addr}")
             return {"user_address": addr, "session_token": token}
 
     print("  (Interactive mode: open browser to authenticate)")
     print(f"  URL: {GATEWAY_URL}/api/v1/auth/zklogin")
+    print("  Demo mode shortcut: export HACKATHON_DEMO_MODE=true or use demo-session-token")
     print()
     try:
         addr = input("  user_address: ").strip()
@@ -102,12 +114,15 @@ def step2():
         print("  (Non-interactive — using env DEMO_ZKLOGIN_ADDRESS/TOKEN)")
 
     if addr and token:
-        r = post("/api/v1/auth/zklogin/verify", {
-            "user_address": addr, "session_token": token,
-        })
-        print(f"  ✓ zkLogin verified" if r.get("valid") else f"  ✗ {r}")
+        print(f"  ✓ zkLogin verified" if verify_zklogin(addr, token) else "  ✗ zkLogin session rejected")
     else:
-        print("  ⚠ No zkLogin credentials — wallet execute will be rejected")
+        token = os.getenv("HACKATHON_DEMO_MODE", "").lower()
+        if token == "true":
+            addr = os.getenv("DEMO_AGENT_ADDRESS", "0x0000000000000000000000000000000000000000000000000000000000000001")
+            token = "demo-session-token"
+            print(f"  ✓ Demo zkLogin session accepted locally: {addr}")
+        else:
+            print("  ⚠ No zkLogin credentials — wallet execute will be rejected")
 
     return {"user_address": addr, "session_token": token}
 
@@ -132,10 +147,12 @@ def step3(session, wid):
         print(f"    (Expected without real gateway — demo continues)")
         return
 
-    print(f"    Tx digest:  {r['tx_digest']}")
-    print(f"    Explorer:   {explorer(r['tx_digest'])}")
+    print_tx("Tx digest", r["tx_digest"])
+    guardian = r.get("guardian") or {}
+    if guardian:
+        print(f"    Guardian:   {'PASS' if guardian.get('passed') else 'BLOCK'} {guardian.get('risk_type', '')}".rstrip())
     if r.get("deepbook_tx_digest"):
-        print(f"    DeepBook:   {explorer(r['deepbook_tx_digest'])}")
+        print_tx("DeepBook", r["deepbook_tx_digest"])
 
 # ── Step 4: Overspend blocked ──
 def step4(session, wid):
@@ -158,7 +175,10 @@ def step4(session, wid):
     })
     if r.get("error"):
         print(f"  ✓ CORRECTLY BLOCKED: [{r['error']['code']}] {r['error']['message']}")
-        print(f"    Move contract EBudgetExceeded enforced on-chain")
+        guardian = r.get("guardian") or {}
+        if guardian:
+            print(f"    Guardian: {guardian.get('risk_type')} — {guardian.get('message')}")
+        print(f"    Move contract EBudgetExceeded is the on-chain backstop")
     else:
         print(f"  ✗ UNEXPECTED: trade succeeded (check budget enforcement)")
 
@@ -168,8 +188,7 @@ def step5(wid):
 
     r = post(f"/api/v1/wallet/{wid}/revoke", {"wallet_id": wid})
     if ok(r, "Move agent_wallet::revoke"):
-        print(f"    Tx digest:  {r['tx_digest']}")
-        print(f"    Explorer:   {explorer(r['tx_digest'])}")
+        print_tx("Tx digest", r["tx_digest"])
         print(f"    Wallet permanently frozen → is_active = false")
 
 # ── Step 6: Verify ──
@@ -204,6 +223,8 @@ def main():
         h = requests.get(f"{GATEWAY_URL}/health", timeout=5).json()
         if not h.get("ready"):
             print("Gateway not ready. Start Kafka + Redis."); sys.exit(1)
+        if h.get("demo_mode"):
+            print("Demo mode: local synchronous execution, no Kafka/Redis/Sui keys required.")
     except Exception:
         print(f"Cannot reach {GATEWAY_URL}"); sys.exit(1)
 

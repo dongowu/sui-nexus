@@ -192,3 +192,25 @@ func TestExecutorRejectsMoveCallPlanWithoutSuiSDK(t *testing.T) {
 	assert.Empty(t, digest)
 	assert.Contains(t, err.Error(), "sui sdk executor is not configured")
 }
+
+func TestDemoExecutorReturnsDeterministicDigestWithoutSuiSDK(t *testing.T) {
+	executor := NewDemoExecutor()
+	ptb := &PTB{
+		Action:    "CreateWallet",
+		GasBudget: 50_000_000,
+		MoveCall: &MoveCallPlan{
+			PackageObjectID: "0xPackage",
+			Module:          "agent_wallet",
+			Function:        "create_wallet",
+			Arguments:       []interface{}{"0xAgent", "500000000000", []string{"0xDeepBook"}, "999999"},
+		},
+	}
+
+	firstDigest, err := executor.ExecutePTB(context.Background(), ptb)
+	require.NoError(t, err)
+	secondDigest, err := executor.ExecutePTB(context.Background(), ptb)
+	require.NoError(t, err)
+
+	assert.Equal(t, firstDigest, secondDigest)
+	assert.Contains(t, firstDigest, "demo-")
+}

@@ -2,6 +2,16 @@
 
 ## 🎯 3-Minute Pitch Structure
 
+### Judge Demo Mode
+
+For live judging, start with:
+
+```bash
+HACKATHON_DEMO_MODE=true ./scripts/demo/run_agent_wallet_demo.sh
+```
+
+Then open `web/dashboard.html`. The console demonstrates wallet creation, Guardian-approved execution, and blocked overspend without external infrastructure. Make clear that `demo-*` digests are local deterministic demo receipts; the deployed testnet package is still verifiable through the README links.
+
 ### Part 1: Problem (30 seconds)
 
 **Script:**

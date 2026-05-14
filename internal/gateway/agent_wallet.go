@@ -16,6 +16,8 @@ import (
 	"github.com/sui-nexus/gateway/internal/storage"
 )
 
+const demoSessionToken = "demo-session-token"
+
 // AgentWalletHandler handles HTTP requests for Agent Wallet operations.
 type AgentWalletHandler struct {
 	config          *config.Config
@@ -113,7 +115,7 @@ func (h *AgentWalletHandler) HandleCreateWallet(c *gin.Context) {
 			TimeEnd:          req.TimeEndEpoch,
 		},
 		IsActive:    true,
-		BalanceMist: 0,
+		BalanceMist: req.BudgetCapMist,
 		ActivityLog: []model.ActivityEntry{},
 	}
 	h.cacheWallet(walletID, wallet)
@@ -128,10 +130,11 @@ func (h *AgentWalletHandler) HandleCreateWallet(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, model.WalletResponse{
-		WalletID: walletID,
-		Policy:   &wallet.Policy,
-		IsActive: true,
-		TxDigest: digest,
+		WalletID:    walletID,
+		Policy:      &wallet.Policy,
+		IsActive:    true,
+		BalanceMist: wallet.BalanceMist,
+		TxDigest:    digest,
 	})
 }
 
@@ -154,13 +157,13 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 	}
 
 	// Step 0: Verify agent's zkLogin session
-	if h.ephemeralKeyMgr == nil {
+	if !h.isHackathonDemoMode() && h.ephemeralKeyMgr == nil {
 		c.JSON(http.StatusServiceUnavailable, model.WalletResponse{
 			Error: &model.ErrorDetail{Code: "ERR_CONFIG", Message: "zkLogin is not configured"},
 		})
 		return
 	}
-	if !h.ephemeralKeyMgr.IsValid(req.UserAddress, req.SessionToken) {
+	if !h.isHackathonDemoMode() && !h.ephemeralKeyMgr.IsValid(req.UserAddress, req.SessionToken) {
 		c.JSON(http.StatusUnauthorized, model.WalletResponse{
 			Error: &model.ErrorDetail{Code: "ERR_AUTH_FAILED", Message: "Invalid or expired zkLogin session. Please re-authenticate."},
 		})
@@ -168,6 +171,11 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 	}
 	// The zkLogin-verified agent address is req.UserAddress (the agent's Sui address)
 	agentAddr := req.UserAddress
+	if h.isHackathonDemoMode() && req.SessionToken == demoSessionToken && agentAddr == "" {
+		if wallet := h.getCachedWallet(req.WalletID); wallet != nil {
+			agentAddr = wallet.AgentAddress
+		}
+	}
 
 	packageID := h.config.AgentWalletPackageID
 	if packageID == "" {
@@ -203,7 +211,11 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 	guardian := h.runGuardianChecks(&req, wallet)
 	if !guardian.Passed {
 		c.JSON(http.StatusUnprocessableEntity, model.WalletResponse{
-			Error: &model.ErrorDetail{Code: "ERR_GUARDIAN_REJECTED", Message: guardian.Message},
+			WalletID:    req.WalletID,
+			IsActive:    wallet.IsActive,
+			BalanceMist: wallet.BalanceMist,
+			Guardian:    guardian.toReport(),
+			Error:       &model.ErrorDetail{Code: "ERR_GUARDIAN_REJECTED", Message: guardian.Message},
 		})
 		return
 	}
@@ -235,10 +247,11 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 		return
 	}
 
-	log.Printf("[agent-wallet] trade executed: tx=%s wallet=%s agent=%s amount=%d protocol=%s", digest, req.WalletID, agentAddr[:16], req.AmountMist, req.Protocol)
+	log.Printf("[agent-wallet] trade executed: tx=%s wallet=%s agent=%s amount=%d protocol=%s", digest, req.WalletID, shortID(agentAddr), req.AmountMist, req.Protocol)
 
 	// Update cached wallet state
 	h.updateWalletAfterTrade(req.WalletID, req.AmountMist, req.Protocol, req.Description)
+	wallet = h.getCachedWallet(req.WalletID)
 
 	// Step 4 (optional): If protocol is DeepBook, execute the actual order
 	// The policy check succeeded, so we can now place the DeepBook limit order
@@ -252,8 +265,8 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 			0,  // order_type: limit order
 			req.ExpectedPrice,
 			req.AmountMist,
-			true, // is_bid = buy
-			uint64(time.Now().UnixMilli() + 60000), // expire in 1 minute
+			true,                                 // is_bid = buy
+			uint64(time.Now().UnixMilli()+60000), // expire in 1 minute
 			h.config.DeepBookPackageID,
 		)
 		if err != nil {
@@ -278,10 +291,40 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, model.WalletResponse{
-		WalletID:      req.WalletID,
-		TxDigest:      digest,
+		WalletID:         req.WalletID,
+		IsActive:         wallet != nil && wallet.IsActive,
+		BalanceMist:      walletBalance(wallet),
+		Policy:           walletPolicy(wallet),
+		TxDigest:         digest,
 		DeepBookTxDigest: deepBookDigest,
+		Guardian:         guardian.toReport(),
 	})
+}
+
+func walletBalance(wallet *model.AgentWallet) uint64 {
+	if wallet == nil {
+		return 0
+	}
+	return wallet.BalanceMist
+}
+
+func walletPolicy(wallet *model.AgentWallet) *model.WalletPolicy {
+	if wallet == nil {
+		return nil
+	}
+	return &wallet.Policy
+}
+
+func (h *AgentWalletHandler) isHackathonDemoMode() bool {
+	return h != nil && h.config != nil && h.config.HackathonDemoMode
+}
+
+func (g GuardianResult) toReport() *model.GuardianReport {
+	return &model.GuardianReport{
+		Passed:   g.Passed,
+		RiskType: g.RiskType,
+		Message:  g.Message,
+	}
 }
 
 // runGuardianChecks performs pre-flight risk assessment before trade execution.
@@ -443,9 +486,9 @@ func (h *AgentWalletHandler) HandleGetActivityLog(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"wallet_id":    walletID,
-		"is_active":    wallet.IsActive,
-		"activities":   wallet.ActivityLog,
+		"wallet_id":     walletID,
+		"is_active":     wallet.IsActive,
+		"activities":    wallet.ActivityLog,
 		"total_entries": len(wallet.ActivityLog),
 	})
 }
@@ -510,6 +553,9 @@ func (h *AgentWalletHandler) updateWalletAfterTrade(walletID string, amountMist 
 		return
 	}
 	w.Policy.BudgetSpentMist += amountMist
+	if w.BalanceMist >= amountMist {
+		w.BalanceMist -= amountMist
+	}
 	w.ActivityLog = append(w.ActivityLog, model.ActivityEntry{
 		Timestamp:   uint64(time.Now().Unix()),
 		Action:      "trade",

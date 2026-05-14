@@ -123,6 +123,9 @@ func (e *Executor) ExecutePTB(ctx context.Context, ptb *PTB) (string, error) {
 	if ptb == nil {
 		return "", fmt.Errorf("ptb is required")
 	}
+	if e.isDemoMode() {
+		return e.executeDemoPTB(ctx, ptb)
+	}
 	if ptb.Transfer != nil {
 		return e.executeTransferSui(ctx, ptb)
 	}

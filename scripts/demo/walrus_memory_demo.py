@@ -40,6 +40,8 @@ def header(t):
     print(f"\n{'─' * 60}\n  {t}\n{'─' * 60}")
 
 def explorer(d):
+    if d.startswith("demo-"):
+        return "local demo digest (real testnet package is listed in README)"
     return f"https://suiexplorer.com/txblock/{d}?network=testnet"
 
 def hmac_sign(task_id, ts, action, amount):
@@ -60,6 +62,8 @@ def check_gateway():
         r = requests.get(f"{GATEWAY_URL}/health", timeout=5)
         if not r.json().get("ready"):
             print("Gateway not ready. Start Kafka + Redis."); sys.exit(1)
+        if r.json().get("demo_mode"):
+            print("Demo mode: local synchronous execution with deterministic Walrus blob IDs.")
     except Exception:
         print(f"Cannot reach {GATEWAY_URL}"); sys.exit(1)
 

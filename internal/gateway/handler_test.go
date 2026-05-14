@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +12,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/sui-nexus/gateway/internal/config"
 	"github.com/sui-nexus/gateway/internal/model"
+	"github.com/sui-nexus/gateway/internal/ptb"
 	"github.com/sui-nexus/gateway/pkg/hmac"
 )
 
@@ -222,4 +226,83 @@ func TestHandleHealthReportsReadyWhenQueueConfigured(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), `"queue"`)
 	assert.Contains(t, w.Body.String(), `"ready":true`)
+}
+
+func TestHandleHealthReportsReadyInHackathonDemoModeWithoutQueue(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	signer := hmac.NewSigner("test-secret", 300)
+	handler := NewHandler(signer, nil, nil, nil, nil, &config.Config{HackathonDemoMode: true})
+	r := NewRouter(handler, signer, nil)
+
+	req, _ := http.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"demo_mode":true`)
+	assert.Contains(t, w.Body.String(), `"ready":true`)
+}
+
+func TestDashboardRouteServesJudgeConsoleWithNarrative(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	signer := hmac.NewSigner("test-secret", 300)
+	handler := NewHandler(signer, nil, nil, nil, nil, &config.Config{HackathonDemoMode: true})
+	r := NewRouter(handler, signer, nil)
+
+	req, _ := http.NewRequest("GET", "/dashboard", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "Sui-Nexus Judge Console")
+	assert.Contains(t, w.Body.String(), "Autonomous agents need programmable settlement")
+	assert.Contains(t, w.Body.String(), "Safe trade passes Guardian")
+	assert.Contains(t, w.Body.String(), "Overspend is blocked before funds move")
+	assert.Contains(t, w.Body.String(), `class="notranslate"`)
+}
+
+func TestHandleIntentProcessesSynchronouslyInHackathonDemoMode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	signer := hmac.NewSigner("test-secret", 300)
+	handler := NewHandler(signer, nil, nil, nil, nil, &config.Config{HackathonDemoMode: true})
+	handler.EnableSynchronousDemoProcessing(ptb.NewBuilder(10_000_000), ptb.NewDemoExecutor())
+	r := NewRouter(handler, signer, nil)
+
+	taskID := "demo-task-sync"
+	timestamp := time.Now().Unix()
+	signature := signer.Sign(taskID, timestamp, "Transfer", "1")
+	reqBody := model.IntentRequest{
+		TaskID: taskID,
+		Action: "Transfer",
+		Params: model.ActionParams{
+			Amount:   "1",
+			DestAddr: "0xRecipient",
+		},
+		Agents: []model.AgentShare{
+			{Address: "0xAgent", Share: 0.1},
+		},
+		ContextPayload: "eyJkZW1vIjp0cnVlfQ==",
+	}
+
+	body, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest("POST", "/api/v1/intent", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "demo-key")
+	req.Header.Set("X-Signature", signature)
+	req.Header.Set("X-Timestamp", strconv.FormatInt(timestamp, 10))
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	var resp model.IntentResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, model.StatusCompleted, resp.Status)
+	assert.NotEmpty(t, resp.TxDigest)
+
+	task, ok := handler.GetDemoTask(context.Background(), taskID)
+	require.True(t, ok)
+	assert.Equal(t, model.StatusCompleted, task.Status)
+	assert.NotEmpty(t, task.BlobID)
+	assert.Equal(t, resp.TxDigest, task.TxDigest)
 }

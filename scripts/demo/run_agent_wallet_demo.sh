@@ -3,6 +3,10 @@ set -euo pipefail
 # Agent Wallet with zkLogin — Agentic Web Track Demo Launcher
 
 GATEWAY_URL="${GATEWAY_URL:-http://localhost:8080}"
+export HACKATHON_DEMO_MODE="${HACKATHON_DEMO_MODE:-true}"
+export AGENT_WALLET_ENABLED="${AGENT_WALLET_ENABLED:-true}"
+export DEMO_ZKLOGIN_ADDRESS="${DEMO_ZKLOGIN_ADDRESS:-0x0000000000000000000000000000000000000000000000000000000000000001}"
+export DEMO_ZKLOGIN_TOKEN="${DEMO_ZKLOGIN_TOKEN:-demo-session-token}"
 
 cleanup() { [ -n "${GATEWAY_PID:-}" ] && kill "${GATEWAY_PID}" 2>/dev/null || true; }
 trap cleanup EXIT
@@ -12,7 +16,7 @@ python3 -c 'import requests' 2>/dev/null || { echo "pip install requests"; exit 
 
 if [ "${START_GATEWAY:-1}" = "1" ]; then
   command -v go >/dev/null 2>&1 || { echo "Missing: go"; exit 1; }
-  echo "Starting Gateway..."
+  echo "Starting Gateway (HACKATHON_DEMO_MODE=${HACKATHON_DEMO_MODE})..."
   go run cmd/gateway/main.go &
   GATEWAY_PID=$!
   sleep 3

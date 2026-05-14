@@ -1,9 +1,21 @@
 package gateway
 
 import (
+	"net/http"
+	"path/filepath"
+	"runtime"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sui-nexus/gateway/pkg/hmac"
 )
+
+func dashboardFilePath() string {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		return "web/dashboard.html"
+	}
+	return filepath.Join(filepath.Dir(file), "..", "..", "web", "dashboard.html")
+}
 
 func NewRouter(handler *Handler, signer *hmac.Signer, agentWalletHandler *AgentWalletHandler) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
@@ -14,6 +26,14 @@ func NewRouter(handler *Handler, signer *hmac.Signer, agentWalletHandler *AgentW
 
 	// Health check (no auth)
 	r.GET("/health", handler.HandleHealth)
+
+	// Judge console (no auth)
+	r.GET("/dashboard", func(c *gin.Context) {
+		c.File(dashboardFilePath())
+	})
+	r.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusTemporaryRedirect, "/dashboard")
+	})
 
 	// WebSocket (no auth for demo)
 	r.GET("/ws", handler.HandleWebSocket)

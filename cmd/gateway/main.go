@@ -59,13 +59,19 @@ func main() {
 		SignerPrivateKey: cfg.SuiSignerPrivateKey,
 		GasObjectID:      cfg.SuiGasObjectID,
 	})
-	if err != nil {
+	if cfg.HackathonDemoMode {
+		log.Println("Hackathon demo mode enabled: using local demo executor")
+		executor = ptb.NewDemoExecutor()
+	} else if err != nil {
 		log.Printf("Warning: Sui SDK executor not configured: %v (signed transaction bytes only)", err)
 		executor = ptb.NewExecutor(cfg.SuiRPCURL)
 	}
 
 	// Initialize Handler
 	handler := gateway.NewHandler(signer, producer, redisStore, hub, nlpClient, cfg)
+	if cfg.HackathonDemoMode {
+		handler.EnableSynchronousDemoProcessing(ptbBuilder, executor)
+	}
 
 	// Initialize AgentWalletHandler if enabled
 	var agentWalletHandler *gateway.AgentWalletHandler

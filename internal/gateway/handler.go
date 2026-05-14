@@ -2,15 +2,19 @@ package gateway
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sui-nexus/gateway/internal/config"
-	"github.com/sui-nexus/gateway/internal/model"
-	"github.com/sui-nexus/gateway/internal/storage"
 	"github.com/sui-nexus/gateway/internal/gateway/zklogin"
+	"github.com/sui-nexus/gateway/internal/model"
+	"github.com/sui-nexus/gateway/internal/ptb"
+	"github.com/sui-nexus/gateway/internal/storage"
 	"github.com/sui-nexus/gateway/pkg/hmac"
 )
 
@@ -24,11 +28,16 @@ type Handler struct {
 	redisStore *storage.RedisStore
 	hub        *Hub
 	nlpClient  *NLPClient
+	cfg        *config.Config
+
+	demoMu       sync.RWMutex
+	demoTasks    map[string]*model.Task
+	demoBuilder  *ptb.Builder
+	demoExecutor *ptb.Executor
 
 	// zkLogin fields
-	config            *config.Config
-	zkLoginProvider   *zklogin.GoogleOAuthProvider // supports Google for now
-	ephemeralKeyMgr  *zklogin.EphemeralKeyManager
+	zkLoginProvider *zklogin.GoogleOAuthProvider // supports Google for now
+	ephemeralKeyMgr *zklogin.EphemeralKeyManager
 }
 
 type componentHealth struct {
@@ -40,6 +49,7 @@ type componentHealth struct {
 type healthResponse struct {
 	Status     string                     `json:"status"`
 	Ready      bool                       `json:"ready"`
+	DemoMode   bool                       `json:"demo_mode,omitempty"`
 	Components map[string]componentHealth `json:"components"`
 }
 
@@ -50,7 +60,10 @@ func NewHandler(signer *hmac.Signer, producer IntentProducer, redisStore *storag
 		redisStore: redisStore,
 		hub:        hub,
 		nlpClient:  nlpClient,
-		config:     cfg,
+		cfg:        cfg,
+	}
+	if cfg != nil && cfg.HackathonDemoMode {
+		handler.demoTasks = make(map[string]*model.Task)
 	}
 
 	// Initialize zkLogin if enabled
@@ -59,6 +72,17 @@ func NewHandler(signer *hmac.Signer, producer IntentProducer, redisStore *storag
 	}
 
 	return handler
+}
+
+// EnableSynchronousDemoProcessing makes /api/v1/intent complete locally without
+// Kafka, Redis, Walrus, or Sui credentials. It is intentionally gated by
+// HACKATHON_DEMO_MODE for judge-friendly demos.
+func (h *Handler) EnableSynchronousDemoProcessing(builder *ptb.Builder, executor *ptb.Executor) {
+	h.demoBuilder = builder
+	h.demoExecutor = executor
+	if h.demoTasks == nil {
+		h.demoTasks = make(map[string]*model.Task)
+	}
 }
 
 // GetEphemeralKeyManager exposes the ephemeral key manager for use by AgentWalletHandler.
@@ -134,6 +158,10 @@ func (h *Handler) HandleIntent(c *gin.Context) {
 	}
 
 	if h.producer == nil {
+		if h.isHackathonDemoMode() && h.demoBuilder != nil && h.demoExecutor != nil {
+			h.processDemoIntent(c, task)
+			return
+		}
 		log.Printf("Kafka producer not available, rejecting task %s", req.TaskID)
 		c.JSON(http.StatusServiceUnavailable, model.IntentResponse{
 			TaskID: req.TaskID,
@@ -180,6 +208,10 @@ func (h *Handler) HandleGetTask(c *gin.Context) {
 	taskID := c.Param("task_id")
 
 	if h.redisStore == nil {
+		if task, ok := h.GetDemoTask(c.Request.Context(), taskID); ok {
+			c.JSON(http.StatusOK, task)
+			return
+		}
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Storage unavailable"})
 		return
 	}
@@ -196,22 +228,31 @@ func (h *Handler) HandleGetTask(c *gin.Context) {
 
 func (h *Handler) HandleHealth(c *gin.Context) {
 	queueReady := h.producer != nil
+	demoMode := h.isHackathonDemoMode()
 	components := map[string]componentHealth{
 		"queue": {
-			Ready:    queueReady,
+			Ready:    queueReady || demoMode,
 			Required: true,
 		},
 		"storage": {
-			Ready:    h.redisStore != nil,
+			Ready:    h.redisStore != nil || demoMode,
 			Required: false,
 		},
 	}
-	if !queueReady {
+	if demoMode && !queueReady {
+		queue := components["queue"]
+		queue.Message = "Hackathon demo mode is processing intents synchronously; Kafka is bypassed"
+		components["queue"] = queue
+	} else if !queueReady {
 		queue := components["queue"]
 		queue.Message = "Kafka producer is not configured; /api/v1/intent will return 503"
 		components["queue"] = queue
 	}
-	if h.redisStore == nil {
+	if demoMode && h.redisStore == nil {
+		storageHealth := components["storage"]
+		storageHealth.Message = "Hackathon demo mode is using in-memory task and wallet state"
+		components["storage"] = storageHealth
+	} else if h.redisStore == nil {
 		storageHealth := components["storage"]
 		storageHealth.Message = "Redis is not configured; task lookup is unavailable"
 		components["storage"] = storageHealth
@@ -219,16 +260,101 @@ func (h *Handler) HandleHealth(c *gin.Context) {
 
 	status := "healthy"
 	httpStatus := http.StatusOK
-	if !queueReady {
+	if !queueReady && !demoMode {
 		status = "unavailable"
 		httpStatus = http.StatusServiceUnavailable
 	}
 
 	c.JSON(httpStatus, healthResponse{
 		Status:     status,
-		Ready:      queueReady,
+		Ready:      queueReady || demoMode,
+		DemoMode:   demoMode,
 		Components: components,
 	})
+}
+
+func (h *Handler) isHackathonDemoMode() bool {
+	return h != nil && h.cfg != nil && h.cfg.HackathonDemoMode
+}
+
+func (h *Handler) processDemoIntent(c *gin.Context, task *model.Task) {
+	task.Status = model.StatusProcessing
+	task.UpdatedAt = time.Now()
+
+	if task.Intent != nil && task.Intent.ContextPayload != "" {
+		task.BlobID = demoBlobID(task.Intent.ContextPayload)
+	}
+
+	ptbTxn, err := h.demoBuilder.Build(task)
+	if err != nil {
+		task.Status = model.StatusFailed
+		task.UpdatedAt = time.Now()
+		h.saveDemoTask(task)
+		c.JSON(http.StatusUnprocessableEntity, model.IntentResponse{
+			TaskID: task.TaskID,
+			Status: model.StatusFailed,
+			Error: &model.ErrorDetail{
+				Code:    "ERR_BUILD_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	digest, err := h.demoExecutor.ExecutePTB(c.Request.Context(), ptbTxn)
+	if err != nil {
+		task.Status = model.StatusFailed
+		task.UpdatedAt = time.Now()
+		h.saveDemoTask(task)
+		c.JSON(http.StatusInternalServerError, model.IntentResponse{
+			TaskID: task.TaskID,
+			Status: model.StatusFailed,
+			Error: &model.ErrorDetail{
+				Code:    "ERR_DEMO_EXECUTION_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	task.Status = model.StatusCompleted
+	task.TxDigest = digest
+	task.UpdatedAt = time.Now()
+	h.saveDemoTask(task)
+
+	if h.hub != nil {
+		h.hub.BroadcastTask(task)
+	}
+
+	c.JSON(http.StatusAccepted, model.IntentResponse{
+		TaskID:   task.TaskID,
+		Status:   model.StatusCompleted,
+		TxDigest: digest,
+	})
+}
+
+func demoBlobID(payload string) string {
+	sum := sha256.Sum256([]byte(payload))
+	return "demo-walrus-" + hex.EncodeToString(sum[:])[:40]
+}
+
+func (h *Handler) saveDemoTask(task *model.Task) {
+	if task == nil {
+		return
+	}
+	h.demoMu.Lock()
+	defer h.demoMu.Unlock()
+	if h.demoTasks == nil {
+		h.demoTasks = make(map[string]*model.Task)
+	}
+	h.demoTasks[task.TaskID] = task
+}
+
+func (h *Handler) GetDemoTask(_ context.Context, taskID string) (*model.Task, bool) {
+	h.demoMu.RLock()
+	defer h.demoMu.RUnlock()
+	task, ok := h.demoTasks[taskID]
+	return task, ok
 }
 
 // HandleParseIntent parses natural language intent into structured format via NLP service.
@@ -258,7 +384,7 @@ func (h *Handler) HandleParseIntent(c *gin.Context) {
 
 	if result.Error != "" {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
-			"error": result.Error,
+			"error":  result.Error,
 			"action": result.Action,
 			"params": result.Params,
 		})
@@ -327,10 +453,10 @@ func (h *Handler) HandleZkLoginAuth(c *gin.Context) {
 	// Set audience from config
 	session := h.ephemeralKeyMgr.GetSessionForToken(sessionToken)
 	if session != nil {
-		session.Audience = h.config.ZkLoginClientID
+		session.Audience = h.cfg.ZkLoginClientID
 	}
 
-	log.Printf("zkLogin session created: email=%s, session=%s...", userInfo.Email, sessionToken[:16])
+	log.Printf("zkLogin session created: email=%s, session=%s...", userInfo.Email, shortID(sessionToken))
 
 	// Return zkLogin session params — client uses these with @mysten/zklogin
 	// to generate the proof and derive the Sui address
@@ -341,7 +467,7 @@ func (h *Handler) HandleZkLoginAuth(c *gin.Context) {
 		"jwt_randomness":    sessionKey.JwtRandomness,
 		"key_claim_name":    "sub",
 		"key_claim_value":   userInfo.Subject,
-		"audience":          h.config.ZkLoginClientID,
+		"audience":          h.cfg.ZkLoginClientID,
 		"issuer":            "https://accounts.google.com",
 		"ephemeral_pub_key": sessionKey.PublicKey,
 		"max_epoch":         sessionKey.MaxEpoch,
