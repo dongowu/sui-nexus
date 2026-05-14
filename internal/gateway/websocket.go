@@ -47,14 +47,22 @@ func (h *Hub) Run() {
 			h.mu.Unlock()
 		case task := <-h.broadcast:
 			h.mu.RLock()
+			var dead []*websocket.Conn
 			for conn := range h.clients {
 				if err := conn.WriteJSON(task); err != nil {
 					log.Printf("WebSocket write error: %v", err)
 					conn.Close()
-					delete(h.clients, conn)
+					dead = append(dead, conn)
 				}
 			}
 			h.mu.RUnlock()
+			if len(dead) > 0 {
+				h.mu.Lock()
+				for _, conn := range dead {
+					delete(h.clients, conn)
+				}
+				h.mu.Unlock()
+			}
 		}
 	}
 }
