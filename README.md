@@ -2,7 +2,10 @@
 
 **The settlement infrastructure for the AI agent economy on Sui.**
 
-> 🏆 Sui Overflow 2026 Submission — Agentic Web + Walrus Tracks
+> 🏆 Sui Overflow 2026 Submission — Agentic Web (Intent Engine) + Walrus Tracks
+>
+> **Deployed on Sui Testnet**: `0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d`
+> ([Verify on Explorer](https://suiexplorer.com/object/0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d?network=testnet))
 
 ---
 
@@ -220,11 +223,11 @@ Trader Agent                 │                    │                    │
 
 ## Track Submissions
 
-### Track 1: Agentic Web — "Agent Wallet with zkLogin"
+### Track 1: Agentic Web — "Intent Engine + Agent Wallet with zkLogin"
 
 **Key Demo**: `scripts/demo/agent_wallet_demo.py`
 
-Demonstrates the full Intent Engine + Agent Wallet flow:
+Demonstrates the full Intent Engine + Agent Wallet flow with 9/9 requirements:
 
 1. **Owner creates wallet** with Move-enforced policy (500 SUI budget, DeepBook only, 24h window)
 2. **Agent authenticates via zkLogin** (Google OAuth → client-side ZK proof → session)
@@ -233,13 +236,13 @@ Demonstrates the full Intent Engine + Agent Wallet flow:
 5. **Owner revokes wallet** → agent permanently frozen → on-chain event emitted
 6. **Activity log verified** on-chain via Sui Explorer
 
-**Innovation**: Not an agent — the settlement layer every agent needs. zkLogin identity + Move policy enforcement + Guardian risk layer + DeepBook execution.
+**Innovation**: Not an agent — the settlement layer every agent needs. zkLogin identity + Move policy enforcement + Guardian risk layer + DeepBook execution. Intent Engine sub-track: agents submit *intents* not transactions — the gateway builds, validates, and executes atomic PTBs with on-chain policy enforcement.
 
 ### Track 2: Walrus — "AI Agent Memory System"
 
 **Key Demo**: `scripts/demo/walrus_memory_demo.py`
 
-Demonstrates cross-agent persistent memory:
+Demonstrates cross-agent persistent memory with 7/7 requirements:
 
 1. **Analyst Agent** analyzes market news via LLM → writes context to Walrus
 2. **Gateway** stores blob → mints MemoryObject on-chain (blob_id + task_id)
@@ -247,6 +250,13 @@ Demonstrates cross-agent persistent memory:
 4. **Trader executes** informed by analyst's research → coordinated multi-agent action
 
 **Innovation**: Walrus as the memory layer for the AI agent economy. Not just storage — verifiable, composable, on-chain referenced memory that persists across sessions and agents.
+
+### On-Chain Verification
+
+| Contract | Testnet Address | Explorer |
+|----------|----------------|----------|
+| Package | `0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d` | [View](https://suiexplorer.com/object/0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d?network=testnet) |
+| Upgrade Cap | `0x7bd41eb7253f93e03f84fe2c963347b62a5cae57a29c8200c92e9a4c6bbfb06b` | [View](https://suiexplorer.com/object/0x7bd41eb7253f93e03f84fe2c963347b62a5cae57a29c8200c92e9a4c6bbfb06b?network=testnet) |
 
 ---
 
@@ -279,10 +289,10 @@ export ZKLOGIN_CLIENT_SECRET="your-google-client-secret"
 
 # Agent Wallet
 export AGENT_WALLET_ENABLED=true
-export AGENT_WALLET_PACKAGE_ID="0x..."  # after sui client publish
+export AGENT_WALLET_PACKAGE_ID="0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d"
 
 # DeepBook (for real DEX orders)
-export DEEPBOOK_PACKAGE_ID="0x..."      # DeepBook V3 testnet package
+export DEEPBOOK_PACKAGE_ID="0xdee9"     # DeepBook V3 testnet package
 export DEEPBOOK_POOL_ID="0x..."         # SUI/USDC pool on testnet
 ```
 
