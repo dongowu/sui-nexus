@@ -4,482 +4,464 @@
     <meta charset="UTF-8">
     <meta name="google" content="notranslate">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sui-Nexus Judge Console</title>
+    <title>Sui-Nexus: Dual-Agent Guardian Demo</title>
     <style>
         :root {
-            --bg: #111111;
-            --panel: #191919;
-            --panel-2: #242220;
-            --line: #3a3733;
-            --text: #f4f1eb;
-            --muted: #aaa29a;
+            --bg: #0a0a0a;
+            --panel: #141414;
+            --line: #2a2a2a;
+            --text: #f0ede8;
+            --muted: #88847c;
             --blue: #4f8cff;
             --green: #39b66a;
             --red: #e2554f;
             --amber: #d8a53d;
             --cyan: #2fb7ad;
+            --agent-a: #4f8cff;
+            --agent-b: #d8a53d;
+            --alert-bg: rgba(226,85,79,.12);
+            --alert-border: rgba(226,85,79,.35);
         }
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            margin: 0;
             background: var(--bg);
             color: var(--text);
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            letter-spacing: 0;
+            font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
+            overflow: hidden;
+            height: 100vh;
         }
-        button, input { font: inherit; }
-        .shell { max-width: 1320px; margin: 0 auto; padding: 24px; }
+        .stage { display: flex; height: 100vh; flex-direction: column; }
+
+        /* ── Top bar ── */
         .topbar {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 18px;
-            margin-bottom: 18px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 24px; border-bottom: 1px solid var(--line);
+            background: #0d0d0d; flex-shrink: 0;
         }
-        h1 { margin: 0 0 6px; font-size: 32px; line-height: 1.1; }
-        .subtitle { color: var(--muted); max-width: 780px; line-height: 1.45; }
-        .pill-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-        .pill {
+        .logo { font-size: 15px; font-weight: 800; letter-spacing: .5px; }
+        .logo span { color: var(--cyan); }
+        .status-row { display: flex; gap: 16px; align-items: center; font-size: 12px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .dot.on { background: var(--green); }
+        .dot.off { background: var(--red); }
+
+        /* ── Main arena ── */
+        .arena {
+            flex: 1; display: grid; grid-template-columns: 1fr 280px 1fr;
+            gap: 0; min-height: 0;
+        }
+
+        /* ── Agent cards ── */
+        .agent-card {
+            padding: 24px 28px; display: flex; flex-direction: column;
+            gap: 16px; position: relative;
+        }
+        .agent-a { border-right: 1px solid var(--line); }
+        .agent-b { border-left: 1px solid var(--line); }
+
+        .agent-header { display: flex; align-items: center; gap: 12px; }
+        .agent-avatar {
+            width: 40px; height: 40px; border-radius: 10px; display: flex;
+            align-items: center; justify-content: center; font-size: 18px; font-weight: 800;
+        }
+        .agent-a .agent-avatar { background: rgba(79,140,255,.18); color: var(--blue); }
+        .agent-b .agent-avatar { background: rgba(216,165,61,.18); color: var(--amber); }
+        .agent-name { font-size: 18px; font-weight: 700; }
+        .agent-addr { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+        .budget-section { margin-top: 8px; }
+        .budget-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+        .budget-bar-outer { height: 14px; border-radius: 999px; background: #0d0d0d; border: 1px solid var(--line); overflow: hidden; }
+        .budget-bar-inner { height: 100%; border-radius: 999px; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+        .agent-a .budget-bar-inner { background: linear-gradient(90deg, var(--blue), #7aafff); }
+        .agent-b .budget-bar-inner { background: linear-gradient(90deg, var(--amber), #f0c964); }
+
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+            border-radius: 999px; font-size: 11px; font-weight: 600; align-self: flex-start;
             border: 1px solid var(--line);
-            border-radius: 999px;
-            padding: 6px 10px;
-            color: var(--muted);
-            background: var(--panel);
-            white-space: nowrap;
-            font-size: 13px;
         }
-        .pill.ready { color: var(--green); border-color: rgba(63,185,80,.45); }
-        .pill.demo { color: var(--cyan); border-color: rgba(57,197,207,.45); }
-        .narrative {
-            display: grid;
-            grid-template-columns: 180px 1fr;
-            gap: 14px;
-            align-items: center;
-            background: #0f0f0f;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 14px 16px;
-            margin-bottom: 16px;
+        .status-badge.ok { color: var(--green); border-color: rgba(57,182,106,.4); background: rgba(57,182,106,.08); }
+        .status-badge.blocked { color: var(--red); border-color: rgba(226,85,79,.4); background: rgba(226,85,79,.08); }
+        .status-badge.waiting { color: var(--muted); }
+
+        .tx-digest { font-size: 11px; color: var(--muted); word-break: break-all; margin-top: 4px; }
+        .tx-link { color: var(--blue); text-decoration: none; }
+        .tx-link:hover { text-decoration: underline; }
+
+        /* ── Center conflict zone ── */
+        .conflict-zone {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 20px; background: #0d0d0d; border-left: 1px solid var(--line);
+            border-right: 1px solid var(--line); padding: 24px 16px;
+            position: relative;
         }
-        .narrative-kicker {
-            color: var(--cyan);
-            font-size: 12px;
-            font-weight: 800;
-            text-transform: uppercase;
+        .conflict-label {
+            font-size: 10px; text-transform: uppercase; letter-spacing: 2px;
+            color: var(--muted); margin-bottom: 4px;
         }
-        .narrative-title {
-            display: block;
-            color: var(--text);
-            font-size: 18px;
-            line-height: 1.25;
-            margin-top: 2px;
+        .conflict-title {
+            font-size: 13px; color: var(--text); text-align: center;
+            line-height: 1.5; font-weight: 600;
         }
-        .narrative-text {
-            color: var(--muted);
-            font-size: 15px;
-            line-height: 1.45;
+        .conflict-oracle {
+            margin-top: 16px; font-size: 36px; filter: grayscale(.3);
         }
-        .grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; }
-        .panel {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 18px;
-            min-width: 0;
+
+        /* Guardian alert */
+        .guardian-alert {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            background: #0a0a0a; border: 2px solid var(--red); border-radius: 16px;
+            padding: 28px 32px; text-align: center; z-index: 10;
+            box-shadow: 0 0 60px rgba(226,85,79,.25), 0 0 120px rgba(226,85,79,.08);
+            animation: alertIn .35s cubic-bezier(.4,0,.2,1);
+            min-width: 320px;
         }
-        .panel h2 { margin: 0 0 14px; font-size: 16px; color: #dbe7f4; }
-        .actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-        .action {
-            border: 1px solid var(--line);
-            background: var(--panel-2);
-            color: var(--text);
-            border-radius: 8px;
-            padding: 14px 12px;
-            cursor: pointer;
-            min-height: 82px;
-            text-align: left;
+        @keyframes alertIn {
+            0% { opacity: 0; transform: translate(-50%,-50%) scale(.9); }
+            100% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
         }
-        .action:hover { border-color: var(--blue); }
-        .action strong { display: block; margin-bottom: 4px; font-size: 14px; }
-        .action span { color: var(--muted); font-size: 12px; line-height: 1.35; }
-        .action:disabled { opacity: .55; cursor: not-allowed; }
-        .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
-        .metric {
-            background: var(--panel-2);
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 13px;
-            min-height: 84px;
+        @keyframes alertPulse {
+            0%,100% { box-shadow: 0 0 40px rgba(226,85,79,.2); }
+            50% { box-shadow: 0 0 80px rgba(226,85,79,.4); }
         }
-        .metric label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
-        .metric strong { font-size: 22px; }
-        .metric small { display: block; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
-        .meter { height: 8px; border-radius: 999px; background: #111111; overflow: hidden; margin-top: 10px; border: 1px solid var(--line); }
-        .meter span { display: block; height: 100%; width: 0; background: var(--green); }
-        .timeline { display: grid; gap: 10px; max-height: 420px; overflow: auto; padding-right: 4px; }
-        .event {
-            background: var(--panel-2);
-            border: 1px solid var(--line);
-            border-left: 3px solid var(--blue);
-            border-radius: 8px;
-            padding: 11px;
+        .guardian-alert.animate { animation: alertIn .35s cubic-bezier(.4,0,.2,1), alertPulse 1.5s ease-in-out infinite; }
+        .guardian-icon { font-size: 48px; margin-bottom: 12px; }
+        .guardian-title { font-size: 16px; font-weight: 800; color: var(--red); margin-bottom: 8px; }
+        .guardian-reason { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+        .guardian-data { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; }
+        .guardian-data .label { color: var(--muted); }
+        .guardian-data .val { color: var(--text); font-weight: 600; }
+        .guardian-data .val.over { color: var(--red); }
+
+        /* ── Bottom event stream ── */
+        .event-stream {
+            flex-shrink: 0; height: 140px; border-top: 1px solid var(--line);
+            background: #0d0d0d; padding: 12px 24px; overflow-y: auto;
+            display: flex; flex-direction: column-reverse; gap: 6px;
         }
-        .event.failed { border-left-color: var(--red); }
-        .event.completed { border-left-color: var(--green); }
-        .event.pending { border-left-color: var(--amber); }
-        .event .row { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
-        .event code { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
-        .status {
-            border-radius: 999px;
-            padding: 3px 8px;
-            background: #111111;
-            color: var(--muted);
-            border: 1px solid var(--line);
-            font-size: 11px;
-            white-space: nowrap;
+        .event-row {
+            display: flex; gap: 16px; font-size: 12px; align-items: flex-start;
+            padding: 4px 0; border-bottom: 1px solid rgba(42,42,42,.5);
+            animation: fadeIn .3s ease;
         }
-        .status.completed { color: var(--green); }
-        .status.failed { color: var(--red); }
-        .status.pending { color: var(--amber); }
-        .detail { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.4; }
-        .link { color: var(--blue); text-decoration: none; }
-        .link:hover { text-decoration: underline; }
-        .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
-        pre {
-            margin: 0;
-            min-height: 216px;
-            max-height: 360px;
-            overflow: auto;
-            background: #0f0f0f;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 14px;
-            color: #dbe7f4;
-            font-size: 12px;
-            line-height: 1.45;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
+        @keyframes fadeIn { 0% { opacity: 0; transform: translateY(-6px); } 100% { opacity: 1; transform: translateY(0); } }
+        .event-time { color: var(--muted); flex-shrink: 0; width: 70px; }
+        .event-agent { font-weight: 700; flex-shrink: 0; width: 60px; }
+        .event-agent.a { color: var(--blue); }
+        .event-agent.b { color: var(--amber); }
+        .event-msg { flex: 1; }
+        .event-msg .ok { color: var(--green); }
+        .event-msg .fail { color: var(--red); }
+
+        /* ── Overlay states ── */
+        .overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 100;
+            display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px;
         }
-        .health-list { display: grid; gap: 8px; }
-        .health-item { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
-        .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--red); flex: 0 0 auto; }
-        .dot.ready { background: var(--green); }
-        .empty { color: var(--muted); font-size: 13px; }
-        @media (max-width: 920px) {
-            .topbar { display: block; }
-            .pill-row { justify-content: flex-start; margin-top: 12px; }
-            .narrative { grid-template-columns: 1fr; }
-            .grid, .split { grid-template-columns: 1fr; }
-            .actions, .metrics { grid-template-columns: 1fr; }
-            h1 { font-size: 26px; }
+        .overlay-btn {
+            background: var(--cyan); color: #000; border: none; border-radius: 8px;
+            padding: 14px 32px; font-size: 15px; font-weight: 700; cursor: pointer;
+            font-family: inherit;
         }
+        .overlay-btn:hover { opacity: .85; }
+
+        .big-number { font-size: 60px; font-weight: 900; font-family: inherit; }
+        .agent-a .big-number { color: var(--blue); }
+        .agent-b .big-number { color: var(--amber); }
     </style>
 </head>
 <body>
-    <main class="shell">
-        <section class="topbar">
-            <div>
-                <h1>Sui-Nexus Judge Console</h1>
-                <div class="subtitle">Settlement infrastructure for autonomous agents on Sui: HMAC intents, zkLogin wallet policy, Guardian risk checks, PTB execution, and Walrus-backed memory.</div>
-            </div>
-            <div class="pill-row">
-                <span id="mode-pill" class="pill">mode unknown</span>
-                <span id="ready-pill" class="pill">gateway unknown</span>
-                <span class="pill">Sui Testnet package verified</span>
-            </div>
-        </section>
+<div class="stage">
+    <!-- Top bar -->
+    <div class="topbar">
+        <div class="logo">Sui-<span>Nexus</span> <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:8px;">Guardian Demo</span></div>
+        <div class="status-row">
+            <span><span id="gw-dot" class="dot off"></span>Gateway</span>
+            <span><span id="ws-dot" class="dot off"></span>WebSocket</span>
+            <span style="color:var(--muted)">Sui Testnet</span>
+            <span id="step-counter" style="color:var(--cyan);font-weight:600"></span>
+        </div>
+    </div>
 
-        <section class="narrative" aria-live="polite">
-            <div>
-                <div id="narrative-step" class="narrative-kicker">Demo thesis</div>
-                <strong id="narrative-title" class="narrative-title">Autonomous agents need programmable settlement</strong>
-            </div>
-            <div id="narrative-text" class="narrative-text">
-                Sui-Nexus turns signed AI intents into policy wallets, Guardian risk checks, PTB execution, and auditable memory on Sui.
-            </div>
-        </section>
-
-        <section class="grid">
-            <div class="panel">
-                <h2>Demo Control</h2>
-                <div class="actions">
-                    <button id="create-wallet" class="action">
-                        <strong>Create Agent Wallet</strong>
-                        <span>Move policy object with budget, protocol scope, and time window.</span>
-                    </button>
-                    <button id="execute-trade" class="action" disabled>
-                        <strong>Execute Safe Trade</strong>
-                        <span>Agent submits an allowed DeepBook intent through Guardian checks.</span>
-                    </button>
-                    <button id="attempt-overspend" class="action" disabled>
-                        <strong>Attempt Overspend</strong>
-                        <span>Shows budget guard rejection before funds can move.</span>
-                    </button>
-                </div>
-                <div class="metrics">
-                    <div class="metric">
-                        <label>Wallet</label>
-                        <strong id="wallet-state">Not created</strong>
-                        <small id="wallet-id">-</small>
-                    </div>
-                    <div class="metric">
-                        <label>Budget Spent</label>
-                        <strong id="budget-spent">0 SUI</strong>
-                        <small id="budget-total">of 500 SUI</small>
-                        <div class="meter"><span id="budget-meter"></span></div>
-                    </div>
-                    <div class="metric">
-                        <label>Guardian</label>
-                        <strong id="guardian-state">Idle</strong>
-                        <small id="guardian-detail">waiting for trade</small>
-                    </div>
-                    <div class="metric">
-                        <label>Walrus Memory</label>
-                        <strong id="walrus-state">Ready</strong>
-                        <small id="walrus-id">context payload not submitted</small>
-                    </div>
+    <!-- Main arena -->
+    <div class="arena">
+        <!-- Agent A -->
+        <div class="agent-card agent-a">
+            <div class="agent-header">
+                <div class="agent-avatar">A</div>
+                <div>
+                    <div class="agent-name">Agent Alpha</div>
+                    <div class="agent-addr">0xAlice</div>
                 </div>
             </div>
-
-            <div class="panel">
-                <h2>System Health</h2>
-                <div id="health-status" class="health-list"><div class="empty">Loading health status...</div></div>
+            <div class="budget-section">
+                <div class="budget-label"><span>Budget Remaining</span><span id="budget-a-text">500 MIST</span></div>
+                <div class="budget-bar-outer"><div id="budget-a-bar" class="budget-bar-inner" style="width:100%"></div></div>
             </div>
-        </section>
-
-        <section class="split">
-            <div class="panel">
-                <h2>Live Intent Stream</h2>
-                <div id="task-list" class="timeline"><div class="empty">Run a demo action to see tasks.</div></div>
+            <span id="status-a" class="status-badge waiting">Waiting...</span>
+            <div id="tx-a" class="tx-digest" style="display:none"></div>
+            <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+                Budget Cap: <strong id="cap-a">500 MIST</strong><br>
+                Protocol: DeepBook
             </div>
-            <div class="panel">
-                <h2>Latest Response</h2>
-                <pre id="response-log">No response yet.</pre>
+            <div id="amount-a-display" style="margin-top:16px;display:none;">
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Trade Amount</div>
+                <div id="amount-a" class="big-number" style="font-size:42px;">-</div>
             </div>
-        </section>
-    </main>
+        </div>
 
-    <script>
-        const params = new URLSearchParams(window.location.search);
-        const GATEWAY_URL = params.get('gateway') || 'http://localhost:8080';
-        const WS_URL = GATEWAY_URL.replace(/^http/, 'ws') + '/ws';
-        const AGENT_ADDRESS = '0x0000000000000000000000000000000000000000000000000000000000000001';
-        const DEEPBOOK_PROTOCOL = '0xdee9';
-        const BUDGET_MIST = 500_000_000_000;
-        const SAFE_TRADE_MIST = 100_000_000_000;
-        const OVERSPEND_MIST = 600_000_000_000;
-        const tasks = new Map();
-        let walletID = '';
-        let ws = null;
-        const narrative = {
-            thesis: {
-                step: 'Demo thesis',
-                title: 'Autonomous agents need programmable settlement',
-                text: 'Sui-Nexus turns signed AI intents into policy wallets, Guardian risk checks, PTB execution, and auditable memory on Sui.'
-            },
-            wallet: {
-                step: 'Step 1',
-                title: 'Policy wallet is created on behalf of the agent',
-                text: 'The wallet carries a Move-enforced budget, protocol allowlist, and time window, so the agent can act without unlimited custody.'
-            },
-            safe: {
-                step: 'Step 2',
-                title: 'Safe trade passes Guardian',
-                text: 'A DeepBook intent fits the wallet policy, passes the Guardian check, executes as a PTB, and records a demo transaction digest.'
-            },
-            blocked: {
-                step: 'Step 3',
-                title: 'Overspend is blocked before funds move',
-                text: 'When the agent asks for more than the remaining budget, Guardian rejects the request and returns a clear audit reason.'
-            },
-            memory: {
-                step: 'Final proof',
-                title: 'Every decision is visible to judges and downstream agents',
-                text: 'The console keeps the wallet state, live intent stream, Guardian result, and response payload together for audit and replay.'
-            }
-        };
+        <!-- Center: Conflict Zone -->
+        <div class="conflict-zone" id="conflict-zone">
+            <div class="conflict-label">Sui-Nexus Guardian</div>
+            <div class="conflict-title" id="conflict-text">Policy-enforced<br>on-chain execution</div>
+            <div class="conflict-oracle" id="conflict-oracle">⚡</div>
+            <div id="guardian-alert-container"></div>
+        </div>
 
-        function sui(mist) {
-            return `${(Number(mist) / 1_000_000_000).toLocaleString()} SUI`;
-        }
-
-        function setNarrative(key) {
-            const item = narrative[key] || narrative.thesis;
-            document.getElementById('narrative-step').textContent = item.step;
-            document.getElementById('narrative-title').textContent = item.title;
-            document.getElementById('narrative-text').textContent = item.text;
-        }
-
-        function explorer(digest) {
-            if (!digest || digest.startsWith('demo-')) return '';
-            return `https://suiexplorer.com/txblock/${digest}?network=testnet`;
-        }
-
-        function setLog(payload) {
-            document.getElementById('response-log').textContent = JSON.stringify(payload, null, 2);
-        }
-
-        function renderHealth(data) {
-            const mode = document.getElementById('mode-pill');
-            mode.textContent = data.demo_mode ? 'demo mode' : 'live mode';
-            mode.className = data.demo_mode ? 'pill demo' : 'pill ready';
-
-            const ready = document.getElementById('ready-pill');
-            ready.textContent = data.ready ? 'gateway ready' : 'gateway unavailable';
-            ready.className = data.ready ? 'pill ready' : 'pill';
-
-            const html = Object.entries(data.components || {}).map(([name, comp]) => `
-                <div class="health-item">
-                    <span class="dot ${comp.ready ? 'ready' : ''}"></span>
-                    <span>${name}: ${comp.ready ? 'ready' : 'unavailable'}${comp.message ? ` — ${comp.message}` : ''}</span>
+        <!-- Agent B -->
+        <div class="agent-card agent-b">
+            <div class="agent-header">
+                <div class="agent-avatar">B</div>
+                <div>
+                    <div class="agent-name">Agent Bravo</div>
+                    <div class="agent-addr">0xBob</div>
                 </div>
-            `).join('');
-            document.getElementById('health-status').innerHTML = html || '<div class="empty">No components reported.</div>';
-        }
+            </div>
+            <div class="budget-section">
+                <div class="budget-label"><span>Budget Remaining</span><span id="budget-b-text">100 MIST</span></div>
+                <div class="budget-bar-outer"><div id="budget-b-bar" class="budget-bar-inner" style="width:100%"></div></div>
+            </div>
+            <span id="status-b" class="status-badge waiting">Waiting...</span>
+            <div id="tx-b" class="tx-digest" style="display:none"></div>
+            <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+                Budget Cap: <strong id="cap-b">100 MIST</strong><br>
+                Protocol: DeepBook
+            </div>
+            <div id="amount-b-display" style="margin-top:16px;display:none;">
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Trade Amount</div>
+                <div id="amount-b" class="big-number" style="font-size:42px;">-</div>
+            </div>
+        </div>
+    </div>
 
-        async function checkHealth() {
-            try {
-                const res = await fetch(`${GATEWAY_URL}/health`);
-                const data = await res.json();
-                renderHealth(data);
-            } catch (err) {
-                document.getElementById('ready-pill').textContent = 'gateway unreachable';
-                document.getElementById('health-status').innerHTML = '<div class="empty">Gateway unreachable.</div>';
+    <!-- Event stream -->
+    <div class="event-stream" id="event-stream">
+        <div class="event-row">
+            <span class="event-time">--:--:--</span>
+            <span class="event-msg" style="color:var(--muted)">Gateway starting up...</span>
+        </div>
+    </div>
+
+    <!-- Welcome overlay -->
+    <div class="overlay" id="welcome-overlay">
+        <div style="font-size:48px;">🛡️</div>
+        <div style="font-size:24px;font-weight:800;">Sui-Nexus Guardian Demo</div>
+        <div style="color:var(--muted);text-align:center;max-width:480px;line-height:1.6;">
+            Two AI agents attempt to execute trades on Sui.<br>
+            One trade is safe. One exceeds the budget cap.<br>
+            The Guardian — enforced by Move on-chain — blocks the second.
+        </div>
+        <button class="overlay-btn" id="start-demo">▶ Start Demo</button>
+    </div>
+</div>
+
+<script>
+const GATEWAY_URL = new URLSearchParams(window.location.search).get('gateway') || 'http://localhost:8080';
+const WS_URL = GATEWAY_URL.replace(/^http/, 'ws') + '/ws';
+const DEMO_TOKEN = 'demo-session-token';
+const MIST_PER_SUI = 1_000_000_000;
+let walletA = '', walletB = '', step = 0, ws = null;
+
+function $(id) { return document.getElementById(id); }
+
+function sui(mist) { return Number(mist) + ' MIST'; }
+function explorer(digest) {
+    if (!digest || digest.startsWith('demo-')) return '';
+    return `https://suiexplorer.com/txblock/${digest}?network=testnet`;
+}
+
+function addEvent(agent, msg, cls) {
+    const stream = $('event-stream');
+    const now = new Date().toLocaleTimeString();
+    const div = document.createElement('div');
+    div.className = 'event-row';
+    div.innerHTML = `<span class="event-time">${now}</span><span class="event-agent ${agent === 'A' ? 'a' : 'b'}">Agent ${agent}</span><span class="event-msg"><span class="${cls || ''}">${msg}</span></span>`;
+    stream.insertBefore(div, stream.firstChild);
+}
+
+function setStatus(agent, text, cls) {
+    const badge = $(`status-${agent.toLowerCase()}`);
+    badge.textContent = text;
+    badge.className = 'status-badge ' + (cls || 'waiting');
+}
+
+function updateBudget(agent, spent, cap) {
+    const prefix = agent.toLowerCase();
+    const remaining = cap - spent;
+    const pct = cap > 0 ? Math.max(0, (remaining / cap) * 100) : 0;
+    $(`budget-${prefix}-text`).textContent = sui(remaining);
+    $(`budget-${prefix}-bar`).style.width = pct + '%';
+    $(`cap-${prefix}`).textContent = sui(cap);
+}
+
+function showTx(agent, digest) {
+    const el = $(`tx-${agent.toLowerCase()}`);
+    el.style.display = 'block';
+    const link = explorer(digest);
+    el.innerHTML = link
+        ? `Tx: <a class="tx-link" href="${link}" target="_blank">${digest.slice(0,12)}... ↗</a>`
+        : `Tx: ${digest || 'demo (memory)'}`;
+}
+
+function showAmount(agent, mist) {
+    $(`amount-${agent.toLowerCase()}-display`).style.display = 'block';
+    $(`amount-${agent.toLowerCase()}`).textContent = sui(mist);
+}
+
+async function createWallet(agentLabel, agentAddr, budget) {
+    addEvent(agentLabel, `Creating wallet with ${sui(budget)} budget cap...`);
+    const res = await fetch(`${GATEWAY_URL}/api/v1/wallet/create`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({agent_address: agentAddr, budget_cap_mist: budget, allowed_protocols: ['DeepBook'], time_end_epoch: 999999})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    addEvent(agentLabel, `Wallet created: ${data.wallet_id.slice(0,14)}...`, 'ok');
+    setStatus(agentLabel, 'Active', 'ok');
+    updateBudget(agentLabel, 0, budget);
+    showTx(agentLabel, data.tx_digest);
+    return data.wallet_id;
+}
+
+async function executeTrade(agentLabel, walletId, amountMist, agentAddr) {
+    showAmount(agentLabel, amountMist);
+    addEvent(agentLabel, `Submitting trade for ${sui(amountMist)}...`);
+    const res = await fetch(`${GATEWAY_URL}/api/v1/wallet/execute`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({wallet_id: walletId, amount_mist: amountMist, protocol: 'DeepBook', expected_price: 1000, description: `${agentLabel} trade`, session_token: DEMO_TOKEN, user_address: agentAddr})
+    });
+    const data = await res.json();
+    const guardian = data.guardian || {};
+
+    if (guardian.passed) {
+        setStatus(agentLabel, 'Trade Approved', 'ok');
+        addEvent(agentLabel, `Guardian passed — trade executed (${sui(amountMist)})`, 'ok');
+        updateBudget(agentLabel, data.policy?.budget_spent_mist || amountMist, data.policy?.budget_cap_mist || amountMist * 5);
+        showTx(agentLabel, data.tx_digest);
+    } else {
+        setStatus(agentLabel, 'BLOCKED', 'blocked');
+        addEvent(agentLabel, `❌ ${guardian.message}`, 'fail');
+        triggerGuardianAlert(guardian);
+    }
+    return {data, guardian};
+}
+
+function triggerGuardianAlert(guardian) {
+    const container = $('guardian-alert-container');
+    container.innerHTML = `
+        <div class="guardian-alert animate">
+            <div class="guardian-icon">🛡️</div>
+            <div class="guardian-title">GUARDIAN INTERCEPTED</div>
+            <div class="guardian-reason">${guardian.message}</div>
+            <div class="guardian-data">
+                <span class="label">Risk Type</span><span style="color:var(--red);font-weight:700;">${guardian.risk_type || 'BUDGET_EXCEEDED'}</span>
+                <span class="label">Requested</span><span class="val over">${sui(guardian.requested || 0)}</span>
+                <span class="label">Allowed</span><span class="val">${sui(guardian.allowed || 0)}</span>
+            </div>
+        </div>`;
+    $('conflict-text').textContent = 'Policy enforced.\nTransaction blocked on-chain.';
+    $('conflict-oracle').textContent = '🔴';
+
+    setTimeout(() => {
+        container.innerHTML = '';
+        $('conflict-oracle').textContent = '⚡';
+        $('conflict-text').innerHTML = 'Policy-enforced<br>on-chain execution';
+    }, 6000);
+}
+
+function setStep(n, text) {
+    step = n;
+    $('step-counter').textContent = text;
+}
+
+async function runDemo() {
+    $('welcome-overlay').remove();
+    $('gw-dot').className = 'dot on';
+
+    try {
+        // Step 1: Create both wallets
+        setStep(1, 'Step 1/4');
+        walletA = await createWallet('A', '0xAlice', 500);
+        await sleep(800);
+        walletB = await createWallet('B', '0xBob', 100);
+        await sleep(1200);
+
+        // Step 2: Agent A safe trade
+        setStep(2, 'Step 2/4');
+        $('conflict-text').textContent = 'Agent Alpha submits a safe trade...';
+        await executeTrade('A', walletA, 100, '0xAlice');
+        await sleep(1500);
+
+        // Step 3: Agent B overspend — THE DRAMA
+        setStep(3, 'Step 3/4');
+        $('conflict-text').textContent = 'Agent Bravo attempts to exceed budget...';
+        $('conflict-oracle').textContent = '⚠️';
+        await sleep(600);
+        await executeTrade('B', walletB, 600, '0xBob');
+        await sleep(3500);
+
+        // Step 4: Agent B recovers with valid trade
+        setStep(4, 'Step 4/4');
+        $('conflict-oracle').textContent = '🔄';
+        $('conflict-text').textContent = 'Agent Bravo adjusts to comply with policy...';
+        await sleep(800);
+        await executeTrade('B', walletB, 50, '0xBob');
+        await sleep(1500);
+
+        // Finale
+        $('step-counter').textContent = '✓ Complete';
+        $('conflict-text').innerHTML = '<span style="color:var(--green)">Every AI agent on Sui<br>needs this settlement layer.</span>';
+        $('conflict-oracle').textContent = '✅';
+
+    } catch (err) {
+        addEvent('!', 'Error: ' + err.message, 'fail');
+        $('step-counter').textContent = 'Error';
+    }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// WebSocket
+function connectWS() {
+    ws = new WebSocket(WS_URL);
+    ws.onopen = () => { $('ws-dot').className = 'dot on'; };
+    ws.onclose = () => { $('ws-dot').className = 'dot off'; setTimeout(connectWS, 3000); };
+    ws.onmessage = (e) => {
+        try {
+            const t = JSON.parse(e.data);
+            if (t && t.status && t.task_id) {
+                addEvent(t.intent?.action ? '→' : '→', `${t.status}: ${t.task_id.slice(0,14)}...`, t.status === 'completed' ? 'ok' : t.status === 'failed' ? 'fail' : '');
             }
-        }
+        } catch(_) {}
+    };
+}
 
-        function recordTask(task) {
-            if (!task || !task.task_id) return;
-            tasks.set(task.task_id, task);
-            renderTasks();
-        }
+// Health check
+async function healthCheck() {
+    try {
+        const res = await fetch(`${GATEWAY_URL}/health`);
+        const data = await res.json();
+        $('gw-dot').className = data.ready ? 'dot on' : 'dot off';
+    } catch(_) {
+        $('gw-dot').className = 'dot off';
+    }
+}
 
-        function renderTasks() {
-            const list = Array.from(tasks.values()).sort((a, b) =>
-                new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0)
-            ).slice(0, 12);
-            if (list.length === 0) {
-                document.getElementById('task-list').innerHTML = '<div class="empty">Run a demo action to see tasks.</div>';
-                return;
-            }
-            document.getElementById('task-list').innerHTML = list.map(task => {
-                const tx = task.tx_digest || '';
-                const link = explorer(tx);
-                const action = task.intent?.action || task.action || 'Wallet';
-                const amount = task.intent?.params?.amount || task.amount_mist || 'N/A';
-                return `
-                    <div class="event ${task.status}">
-                        <div class="row">
-                            <code>${task.task_id}</code>
-                            <span class="status ${task.status}">${task.status}</span>
-                        </div>
-                        <div class="detail">${action} · amount ${amount}${task.blob_id ? ` · ${task.blob_id}` : ''}</div>
-                        ${tx ? `<div class="detail">${link ? `<a class="link" href="${link}" target="_blank">View on Sui Explorer</a>` : tx}</div>` : ''}
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function updateWallet(wallet) {
-            if (!wallet || wallet.error) return;
-            walletID = wallet.wallet_id || walletID;
-            const policy = wallet.policy || {};
-            const spent = Number(policy.budget_spent_mist || 0);
-            const cap = Number(policy.budget_cap_mist || BUDGET_MIST);
-            const pct = cap > 0 ? Math.min(100, (spent / cap) * 100) : 0;
-            document.getElementById('wallet-state').textContent = wallet.is_active === false ? 'Revoked' : 'Active';
-            document.getElementById('wallet-id').textContent = walletID || '-';
-            document.getElementById('budget-spent').textContent = sui(spent);
-            document.getElementById('budget-total').textContent = `of ${sui(cap)}`;
-            document.getElementById('budget-meter').style.width = `${pct}%`;
-            document.getElementById('execute-trade').disabled = !walletID || wallet.is_active === false;
-            document.getElementById('attempt-overspend').disabled = !walletID || wallet.is_active === false;
-        }
-
-        async function refreshWallet() {
-            if (!walletID) return;
-            const res = await fetch(`${GATEWAY_URL}/api/v1/wallet/${walletID}`);
-            updateWallet(await res.json());
-        }
-
-        async function createWallet() {
-            const res = await fetch(`${GATEWAY_URL}/api/v1/wallet/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    agent_address: AGENT_ADDRESS,
-                    budget_cap_mist: BUDGET_MIST,
-                    allowed_protocols: [DEEPBOOK_PROTOCOL],
-                    time_end_epoch: 999999
-                })
-            });
-            const data = await res.json();
-            setLog(data);
-            if (!data.error) {
-                setNarrative('wallet');
-                updateWallet(data);
-                recordTask({ task_id: data.wallet_id, status: 'completed', tx_digest: data.tx_digest, action: 'CreateWallet', updated_at: new Date().toISOString() });
-            }
-        }
-
-        async function executeTrade(amount, description) {
-            if (!walletID) return;
-            const res = await fetch(`${GATEWAY_URL}/api/v1/wallet/execute`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    wallet_id: walletID,
-                    amount_mist: amount,
-                    protocol: DEEPBOOK_PROTOCOL,
-                    expected_price: 1000,
-                    description,
-                    session_token: 'demo-session-token',
-                    user_address: AGENT_ADDRESS
-                })
-            });
-            const data = await res.json();
-            setLog(data);
-            const guardian = data.guardian || {};
-            setNarrative(data.error ? 'blocked' : 'safe');
-            document.getElementById('guardian-state').textContent = guardian.passed ? 'Passed' : 'Blocked';
-            document.getElementById('guardian-detail').textContent = guardian.risk_type || guardian.message || 'policy check complete';
-            recordTask({
-                task_id: `${walletID}:${description}`,
-                status: data.error ? 'failed' : 'completed',
-                tx_digest: data.tx_digest,
-                action: description,
-                amount_mist: amount,
-                updated_at: new Date().toISOString()
-            });
-            await refreshWallet();
-        }
-
-        function connectWebSocket() {
-            ws = new WebSocket(WS_URL);
-            ws.onmessage = event => {
-                try { recordTask(JSON.parse(event.data)); } catch (_) {}
-            };
-            ws.onclose = () => setTimeout(connectWebSocket, 3000);
-        }
-
-        document.getElementById('create-wallet').addEventListener('click', createWallet);
-        document.getElementById('execute-trade').addEventListener('click', () => executeTrade(SAFE_TRADE_MIST, 'DeepBook safe trade'));
-        document.getElementById('attempt-overspend').addEventListener('click', () => executeTrade(OVERSPEND_MIST, 'Budget overspend attempt'));
-
-        async function runAutoDemo() {
-            await checkHealth();
-            await createWallet();
-            setTimeout(() => executeTrade(SAFE_TRADE_MIST, 'DeepBook safe trade'), 3000);
-            setTimeout(() => executeTrade(OVERSPEND_MIST, 'Budget overspend attempt'), 7000);
-            setTimeout(() => setNarrative('memory'), 10000);
-        }
-
-        setInterval(checkHealth, 4000);
-        checkHealth();
-        connectWebSocket();
-        if (params.get('autorun') === '1') {
-            setTimeout(runAutoDemo, 1200);
-        }
-    </script>
+$('start-demo').addEventListener('click', runDemo);
+connectWS();
+setInterval(healthCheck, 5000);
+healthCheck();
+</script>
 </body>
 </html>
