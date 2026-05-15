@@ -82,7 +82,10 @@ type WalletResponse struct {
 
 // GuardianReport explains the pre-flight risk decision for judge-visible demos.
 type GuardianReport struct {
-	Passed   bool   `json:"passed"`
-	RiskType string `json:"risk_type,omitempty"`
-	Message  string `json:"message,omitempty"`
+	Passed    bool   `json:"passed"`
+	RiskType  string `json:"risk_type,omitempty"`
+	Message   string `json:"message,omitempty"`
+	Requested uint64 `json:"requested,omitempty"`
+	Allowed   uint64 `json:"allowed,omitempty"`
+	Reason    string `json:"reason,omitempty"`
 }

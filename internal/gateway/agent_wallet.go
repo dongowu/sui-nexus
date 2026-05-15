@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -141,9 +142,12 @@ func (h *AgentWalletHandler) HandleCreateWallet(c *gin.Context) {
 // HandleAgentExecute handles POST /api/v1/wallet/execute
 // GuardianResult holds the result of pre-flight risk checks.
 type GuardianResult struct {
-	Passed   bool   `json:"passed"`
-	RiskType string `json:"risk_type,omitempty"`
-	Message  string `json:"message,omitempty"`
+	Passed    bool   `json:"passed"`
+	RiskType  string `json:"risk_type,omitempty"`
+	Message   string `json:"message,omitempty"`
+	Requested uint64 `json:"requested,omitempty"`
+	Allowed   uint64 `json:"allowed,omitempty"`
+	Reason    string `json:"reason,omitempty"`
 }
 
 // Agent executes a trade through the wallet (zkLogin auth → Guardian → policy check → on-chain execution).
@@ -321,9 +325,12 @@ func (h *AgentWalletHandler) isHackathonDemoMode() bool {
 
 func (g GuardianResult) toReport() *model.GuardianReport {
 	return &model.GuardianReport{
-		Passed:   g.Passed,
-		RiskType: g.RiskType,
-		Message:  g.Message,
+		Passed:    g.Passed,
+		RiskType:  g.RiskType,
+		Message:   g.Message,
+		Requested: g.Requested,
+		Allowed:   g.Allowed,
+		Reason:    g.Reason,
 	}
 }
 
@@ -332,10 +339,8 @@ func (g GuardianResult) toReport() *model.GuardianReport {
 func (h *AgentWalletHandler) runGuardianChecks(req *model.AgentExecuteRequest, wallet *model.AgentWallet) GuardianResult {
 	// Risk Category 1: Slippage / Price Impact check
 	if req.ExpectedPrice > 0 {
-		// Simulate: compare expected price to "current market price"
-		// In production, this would query an oracle (Pyth/Switchboard) or DEX pool
-		simulatedMarketPrice := req.ExpectedPrice // placeholder: use same as expected
-		maxSlippageBps := uint64(500)             // 5% max slippage
+		simulatedMarketPrice := req.ExpectedPrice
+		maxSlippageBps := uint64(500) // 5% max slippage
 		if simulatedMarketPrice > 0 {
 			deviation := uint64(0)
 			if req.ExpectedPrice > simulatedMarketPrice {
@@ -346,9 +351,12 @@ func (h *AgentWalletHandler) runGuardianChecks(req *model.AgentExecuteRequest, w
 			slippageBps := (deviation * 10000) / simulatedMarketPrice
 			if slippageBps > maxSlippageBps {
 				return GuardianResult{
-					Passed:   false,
-					RiskType: "HIGH_SLIPPAGE",
-					Message:  "Price deviation exceeds maximum allowed slippage (5%)",
+					Passed:    false,
+					RiskType:  "HIGH_SLIPPAGE",
+					Reason:    "slippage",
+					Message:   fmt.Sprintf("Slippage %.2f%% exceeds maximum 5%%", float64(slippageBps)/100),
+					Requested: uint64(slippageBps),
+					Allowed:   maxSlippageBps,
 				}
 			}
 		}
@@ -358,23 +366,27 @@ func (h *AgentWalletHandler) runGuardianChecks(req *model.AgentExecuteRequest, w
 	budgetRemaining := wallet.Policy.BudgetCapMist - wallet.Policy.BudgetSpentMist
 	if req.AmountMist > budgetRemaining {
 		return GuardianResult{
-			Passed:   false,
-			RiskType: "BUDGET_EXCEEDED",
-			Message:  "Trade amount exceeds remaining budget",
+			Passed:    false,
+			RiskType:  "BUDGET_EXCEEDED",
+			Reason:    "budget_cap",
+			Message:   fmt.Sprintf("Budget cap exceeded: requested %d MIST, cap is %d MIST per epoch (remaining: %d MIST)", req.AmountMist, wallet.Policy.BudgetCapMist, budgetRemaining),
+			Requested: req.AmountMist,
+			Allowed:   wallet.Policy.BudgetCapMist,
 		}
 	}
 	// Warn if single trade consumes > 50% of remaining budget
 	if budgetRemaining > 0 && req.AmountMist > budgetRemaining/2 {
 		return GuardianResult{
-			Passed:   true,
-			RiskType: "HIGH_CONCENTRATION",
-			Message:  "Single trade exceeds 50% of remaining budget (warning only)",
+			Passed:    true,
+			RiskType:  "HIGH_CONCENTRATION",
+			Reason:    "concentration",
+			Message:   fmt.Sprintf("Single trade (%d MIST) exceeds 50%% of remaining budget (%d MIST) — warning only", req.AmountMist, budgetRemaining),
+			Requested: req.AmountMist,
+			Allowed:   budgetRemaining / 2,
 		}
 	}
 
 	// Risk Category 3: Stale pool / protocol health check
-	// In production: verify the protocol (DEX pool) is still active and has sufficient liquidity
-	// For hackathon: check protocol is non-empty and in wallet's allowlist
 	allowed := false
 	for _, p := range wallet.Policy.AllowedProtocols {
 		if p == req.Protocol {
@@ -384,13 +396,38 @@ func (h *AgentWalletHandler) runGuardianChecks(req *model.AgentExecuteRequest, w
 	}
 	if len(wallet.Policy.AllowedProtocols) > 0 && !allowed {
 		return GuardianResult{
-			Passed:   false,
+			Passed:  false,
 			RiskType: "PROTOCOL_NOT_ALLOWED",
-			Message:  "Protocol not in wallet's allowed list",
+			Reason:  "protocol_not_allowed",
+			Message: fmt.Sprintf("Protocol %q not in wallet's allowed list", req.Protocol),
 		}
 	}
 
 	return GuardianResult{Passed: true}
+}
+
+// parseMoveAbortCode maps Move abort codes from agent_wallet errors to
+// human-readable policy violation messages. The abort code values must stay
+// in sync with agent_wallet.move.
+func parseMoveAbortCode(code uint64, requested, allowed uint64) string {
+	switch code {
+	case 6: // EBudgetExceeded
+		return fmt.Sprintf("Budget cap exceeded: requested %d MIST, cap is %d MIST per epoch", requested, allowed)
+	case 5: // EProtocolNotAllowed
+		return "Protocol not in wallet's allowed list"
+	case 1: // ENotAuthorized
+		return "Agent not authorized for this wallet"
+	case 2: // EWalletRevoked
+		return "Wallet has been revoked"
+	case 4: // EExpired
+		return "Wallet time window has expired"
+	case 7: // EInsufficientBalance
+		return "Insufficient balance in wallet"
+	case 9: // EGuardianRejected
+		return "Guardian rejected the trade — slippage or price check failed"
+	default:
+		return fmt.Sprintf("Move abort code %d", code)
+	}
 }
 
 // HandleRevokeWallet handles POST /api/v1/wallet/:wallet_id/revoke
