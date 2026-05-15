@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh" class="notranslate" translate="no">
+<html lang="en" class="notranslate" translate="no">
 <head>
 <meta charset="UTF-8">
 <meta name="google" content="notranslate">
@@ -21,7 +21,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
         background: var(--bg); color: var(--text);
-        font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+        font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
         height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased;
     }
     .stage {
@@ -156,19 +156,19 @@
         display: flex; flex-direction: column; align-items: center;
         justify-content: center; gap: 4px;
     }
-    .sub-zh {
+    .sub-main {
         font-size: 15px; font-weight: 600; color: #fff; line-height: 1.4;
         opacity: 0; transform: translateY(6px);
         transition: opacity .4s, transform .4s;
     }
-    .sub-zh.on { opacity: 1; transform: translateY(0); }
-    .sub-en {
+    .sub-main.on { opacity: 1; transform: translateY(0); }
+    .sub-detail {
         font-size: 11px; color: var(--muted); line-height: 1.4;
         opacity: 0; transform: translateY(4px);
         transition: opacity .4s .1s, transform .4s .1s;
     }
-    .sub-en.on { opacity: 1; transform: translateY(0); }
-    .sub-zh em, .sub-en em { font-style: normal; color: var(--cyan); }
+    .sub-detail.on { opacity: 1; transform: translateY(0); }
+    .sub-main em, .sub-detail em { font-style: normal; color: var(--cyan); }
 
     /* ── Tech callout (pops near center) ── */
     .tech-callout {
@@ -208,7 +208,6 @@
         line-height: 1.8;
     }
     .overlay-sub strong { color: var(--text); }
-    .overlay-sub .zh { font-size: 15px; color: #fff; display: block; margin-bottom: 6px; }
     .overlay-btn {
         background: #fff; color: #000; border: none; border-radius: 10px;
         padding: 16px 48px; font-size: 16px; font-weight: 700; cursor: pointer;
@@ -253,9 +252,9 @@
         <div class="agent-panel left" id="panel-a">
             <div class="agent-label" id="label-a">Agent Alpha</div>
             <div class="agent-name" id="name-a">Trading AI</div>
-            <div class="agent-cap">预算 500 MIST · DeepBook</div>
+            <div class="agent-cap">Budget 500 MIST · DeepBook</div>
             <div class="budget-row">
-                <div class="budget-numbers"><span>剩余</span><span id="budget-a-text">500 MIST</span></div>
+                <div class="budget-numbers"><span>Remaining</span><span id="budget-a-text">500 MIST</span></div>
                 <div class="budget-bar"><div class="budget-bar-inner" id="budget-a-bar" style="width:100%"></div></div>
             </div>
             <div class="tx-badge" id="badge-a"></div>
@@ -266,16 +265,16 @@
         <div class="center-stage" id="center-stage">
             <div class="tech-callout" id="tech-callout"></div>
             <div class="center-icon" id="center-icon">◈</div>
-            <div class="center-label" id="center-label">Sui-Nexus Guardian<br>链上策略执行层</div>
+            <div class="center-label" id="center-label">Sui-Nexus Guardian<br>Move-Enforced Policy Layer</div>
             <div class="alert-card" id="alert-card">
                 <div class="alert-icon">🛡️</div>
-                <div class="alert-title">GUARDIAN 拦截</div>
+                <div class="alert-title">GUARDIAN INTERCEPTED</div>
                 <div class="alert-reason" id="alert-reason"></div>
                 <div class="alert-grid">
-                    <span class="lbl">风险类型</span><span style="color:var(--red);font-weight:700;" id="alert-type">-</span>
-                    <span class="lbl">请求金额</span><span class="val bad" id="alert-req">-</span>
-                    <span class="lbl">允许上限</span><span class="val" id="alert-allowed">-</span>
-                    <span class="lbl">拦截原因</span><span id="alert-code" style="color:var(--amber)">-</span>
+                    <span class="lbl">Risk Type</span><span style="color:var(--red);font-weight:700;" id="alert-type">-</span>
+                    <span class="lbl">Requested</span><span class="val bad" id="alert-req">-</span>
+                    <span class="lbl">Allowed</span><span class="val" id="alert-allowed">-</span>
+                    <span class="lbl">Reason</span><span id="alert-code" style="color:var(--amber)">-</span>
                 </div>
             </div>
         </div>
@@ -284,9 +283,9 @@
         <div class="agent-panel right" id="panel-b">
             <div class="agent-label" id="label-b">Agent Bravo</div>
             <div class="agent-name" id="name-b">Trading AI</div>
-            <div class="agent-cap">预算 100 MIST · DeepBook</div>
+            <div class="agent-cap">Budget 100 MIST · DeepBook</div>
             <div class="budget-row">
-                <div class="budget-numbers"><span>剩余</span><span id="budget-b-text">100 MIST</span></div>
+                <div class="budget-numbers"><span>Remaining</span><span id="budget-b-text">100 MIST</span></div>
                 <div class="budget-bar"><div class="budget-bar-inner" id="budget-b-bar" style="width:100%"></div></div>
             </div>
             <div class="tx-badge" id="badge-b"></div>
@@ -296,33 +295,33 @@
 
     <!-- Subtitle track -->
     <div class="subtitle-track">
-        <div class="sub-zh" id="sub-zh">等待网关启动...</div>
-        <div class="sub-en" id="sub-en">Waiting for gateway...</div>
+        <div class="sub-main" id="sub-main">Waiting for gateway...</div>
+        <div class="sub-detail" id="sub-detail">Start the gateway to begin the demo</div>
     </div>
 
     <!-- Event bar -->
     <div class="event-bar" id="event-bar">
-        <span style="color:var(--muted)">●</span> 系统就绪 — 点击 Start Demo 开始演示
+        <span style="color:var(--muted)">●</span> System ready — click Start Demo to begin
     </div>
 </div>
 
 <!-- Opening overlay -->
 <div class="overlay" id="opening-overlay">
-    <div class="overlay-title">AI 智能体需要<br>一个<em>结算层</em></div>
+    <div class="overlay-title">AI Agents Need<br>a <em>Settlement Layer</em></div>
     <div class="overlay-sub">
-        <span class="zh">现在的 AI agent 能生成交易策略，但<strong>谁来管钱？谁设限制？谁留审计？</strong></span>
-        Sui-Nexus 给 Sui 上的每个 AI agent 一个<strong>策略控制的钱包</strong>。<br>
-        预算上限、协议范围、时间窗口——<strong>全部在 Move 合约里链上执行</strong>。<br>
-        不是中间件允不允许的问题，是 Sui 本身同不同意。
+        AI agents today can generate trading strategies.<br>
+        But <strong>who holds the keys? Who sets the limits? Who audits the trail?</strong><br><br>
+        <em>Sui-Nexus</em> gives every AI agent on Sui a <strong>policy-controlled wallet</strong>.<br>
+        Budget caps. Protocol scope. Time windows.<br>
+        All <strong>enforced on-chain in Move</strong>. Not in middleware. On Sui itself.
     </div>
-    <button class="overlay-btn" id="start-btn">▶ 开始演示 Start Demo</button>
+    <button class="overlay-btn" id="start-btn">▶ Start Demo</button>
 </div>
 
 <!-- Victory overlay -->
 <div class="overlay hidden" id="victory-overlay">
-    <div class="overlay-title">Sui 上每个 AI agent<br>都需要 <em>Sui-Nexus</em></div>
+    <div class="overlay-title">Every AI Agent on Sui<br>Needs <em>Sui-Nexus</em></div>
     <div class="overlay-sub">
-        <span class="zh">策略控制钱包 · Move 链上执行 · Guardian 风险检查 · 全程可审计</span>
         Policy-controlled wallets. Move-enforced execution. Guardian risk checks.<br>
         Fully auditable. Every trade traceable on Sui.<br><br>
         <strong style="color:var(--cyan)">Deployed on Sui Testnet · Sui Overflow 2026</strong><br>
@@ -339,11 +338,11 @@ function $(id) { return document.getElementById(id); }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── Subtitle system ──
-function setSub(zh, en) {
-    const z = $('sub-zh'), e = $('sub-en');
-    z.classList.remove('on'); e.classList.remove('on');
-    setTimeout(() => { z.innerHTML = zh; e.innerHTML = en; }, 180);
-    setTimeout(() => { z.classList.add('on'); e.classList.add('on'); }, 280);
+function setSub(main, detail) {
+    const m = $('sub-main'), d = $('sub-detail');
+    m.classList.remove('on'); d.classList.remove('on');
+    setTimeout(() => { m.innerHTML = main; d.innerHTML = detail; }, 180);
+    setTimeout(() => { m.classList.add('on'); d.classList.add('on'); }, 280);
 }
 
 // ── Title caption ──
@@ -419,41 +418,41 @@ async function runDemo() {
     await sleep(600);
 
     // ═══════════ PHASE 1: THE PROBLEM ═══════════
-    setPhase('1/5 · 问题');
-    setTitle('AI agent 能生成交易策略。<br>但<em>谁来管钱？谁来设限？谁来审计？</em>');
+    setPhase('1/5 · THE PROBLEM');
+    setTitle('AI agents can generate strategies.<br>But <em>who holds the keys? Who sets the limits? Who audits the trail?</em>');
     setSub(
-        '没有结算层的 AI agent 只有两个选择：无限托管权限（随时可能出事故），或者根本不能花钱。两个都是死路。',
-        'Without a settlement layer, AI agents either get unlimited custody — or can\'t spend at all. Both paths lead nowhere.'
+        'Without a settlement layer, AI agents either get unlimited custody — a security nightmare — or can\'t spend at all. Both paths are broken.',
+        'The AI agent economy needs programmable on-chain settlement before agents can safely control value.'
     );
-    setCenter('◈', 'Sui-Nexus<br>AI Agent 结算层');
-    eventLog('Sui-Nexus: 让 AI agent 在 Sui 上安全地花钱');
+    setCenter('◈', 'Sui-Nexus<br>AI Agent Settlement');
+    eventLog('Sui-Nexus: The settlement layer for the AI agent economy on Sui');
     setProgress(5);
     await sleep(5500);
 
     // ═══════════ PHASE 2: THE SOLUTION ═══════════
-    setPhase('2/5 · 方案');
-    setTitle('<em>策略控制钱包</em> + Guardian 风险检查 + <em>Move 链上执行</em>');
+    setPhase('2/5 · THE SOLUTION');
+    setTitle('<em>Policy-controlled wallets</em> + Guardian risk checks + <em>Move-enforced execution</em>');
     setSub(
-        '每个 agent 得到一个 Move 智能合约钱包——预算上限、协议白名单、时间窗口。网关做预检（滑点、余额），<em>Move 合约做最终裁决</em>。不是\"中间件允许\"，是 Sui 链自己同意。',
-        'Every agent gets a Move smart contract wallet — budget caps, protocol scope, time windows. Gateway pre-checks slippage & balance. <em>Move contract is the final enforcer</em> — not middleware saying no, Sui itself saying no.'
+        'Every agent gets a Move smart contract wallet — budget caps, protocol whitelists, time windows. The gateway pre-checks slippage and balance. <em>The Move contract is the final enforcer</em> — on-chain, not middleware.',
+        'Two-layer architecture: Gateway for agent access + pre-checks. Move VM for final, unstoppable policy enforcement on Sui.'
     );
-    showTech('Move 智能合约 · 不可绕过', 'move');
-    setCenter('◈', '双层架构<br>网关预检 + Move 裁决');
-    eventLog('架构: HMAC认证 → Guardian预检 → Move策略执行 → PTB交易 → Walrus审计');
+    showTech('Move Smart Contract · Unbypassable', 'move');
+    setCenter('◈', 'Dual-Layer Architecture<br>Gateway Pre-check + Move Enforcement');
+    eventLog('Pipeline: HMAC Auth → Guardian Pre-check → Move Policy → PTB Execution → Walrus Audit');
     setProgress(18);
     await sleep(6500);
     hideTech();
 
     // ═══════════ PHASE 3: SETUP ═══════════
-    setPhase('3/5 · 部署');
-    setTitle('两个 AI agent。两个策略钱包。<em>不同的预算上限。</em>');
+    setPhase('3/5 · SETUP');
+    setTitle('Two AI agents. Two policy wallets. <em>Different budget limits.</em>');
     setSub(
-        'Agent Alpha 预算 500 MIST。Agent Bravo 预算 100 MIST。都在 DeepBook 协议白名单中。都由<em>同一个 Move 合约</em>强制执行策略。',
-        'Agent Alpha: 500 MIST budget. Agent Bravo: 100 MIST budget. Both whitelisted for DeepBook. Both enforced by <em>the same Move contract</em>.'
+        'Agent Alpha: 500 MIST budget. Agent Bravo: 100 MIST budget. Both whitelisted for DeepBook. Both enforced by <em>the same Move contract on Sui</em>.',
+        'Neither agent can exceed its policy. The Move contract is the single source of truth — not a config file, not a middleware setting.'
     );
-    setCenter('⏳', '创建策略钱包…');
+    setCenter('⏳', 'Creating policy wallets...');
     setProgress(25);
-    eventLog('正在为 Agent Alpha 创建钱包 (预算 500 MIST)...');
+    eventLog('Creating Agent Alpha wallet (budget: 500 MIST)...');
     await sleep(2000);
 
     const rA = await api('/api/v1/wallet/create', {
@@ -464,8 +463,8 @@ async function runDemo() {
     walletA = rA.wallet_id;
     showAgent('A');
     updateBudget('A', 0, 500);
-    showBadge('A', '✓ 钱包已创建', 'ok');
-    eventLog('✓ Agent Alpha 钱包创建成功 · 预算 500 MIST · 链上确认');
+    showBadge('A', '✓ Wallet Created', 'ok');
+    eventLog('✓ Agent Alpha wallet created · budget 500 MIST · confirmed on-chain');
     setProgress(35);
     await sleep(1200);
 
@@ -477,24 +476,24 @@ async function runDemo() {
     walletB = rB.wallet_id;
     showAgent('B');
     updateBudget('B', 0, 100);
-    showBadge('B', '✓ 钱包已创建', 'ok');
-    eventLog('✓ Agent Bravo 钱包创建成功 · 预算 100 MIST · 链上确认');
-    showTech('Move 策略在链上 · 不可绕过', 'move');
-    setCenter('◈', '两个钱包就绪<br>Guardian 待命');
+    showBadge('B', '✓ Wallet Created', 'ok');
+    eventLog('✓ Agent Bravo wallet created · budget 100 MIST · confirmed on-chain');
+    showTech('Move Policy On-Chain · Unbypassable', 'move');
+    setCenter('◈', 'Two Wallets Ready<br>Guardian Standing By');
     setProgress(48);
     await sleep(3000);
     hideTech();
 
     // ═══════════ PHASE 4: SAFE TRADE ═══════════
-    setPhase('4/5 · 正常交易');
-    setTitle('Agent Alpha 提交 100 MIST 交易。<em>预算内、协议内、Guardian 放行。</em>');
+    setPhase('4/5 · SAFE TRADE');
+    setTitle('Agent Alpha submits 100 MIST. <em>Within budget. Within protocol. Guardian passes.</em>');
     setSub(
-        '网关 Guardian 预检：滑点 < 5% ✓ 余额充足 ✓ 协议在白名单 ✓ → <em>Move 合约原子执行 PTB</em> → Sui 链上确认。全程不到一秒。',
-        'Gateway Guardian pre-check: slippage < 5% ✓ balance sufficient ✓ protocol whitelisted ✓ → <em>Move contract atomically executes PTB</em> → Sui on-chain confirmation. Under one second.'
+        'Gateway Guardian pre-check: slippage < 5% ✓ balance sufficient ✓ protocol whitelisted ✓ → <em>Move contract atomically executes the PTB</em> → Sui confirms on-chain. Under one second.',
+        'The Guardian is the first line of defense. The Move contract is the final word. Both must agree before a single MIST moves.'
     );
-    showTech('Guardian 风险引擎 · 三重检查', 'guardian');
-    setCenter('→', '收到交易请求…');
-    eventLog('Agent Alpha: 提交 100 MIST 交易 → DeepBook');
+    showTech('Guardian Risk Engine · Triple Check', 'guardian');
+    setCenter('→', 'Incoming trade...');
+    eventLog('Agent Alpha: submitting 100 MIST trade → DeepBook');
     showAmount('A', 100);
     setProgress(60);
     await sleep(2500);
@@ -506,25 +505,25 @@ async function runDemo() {
     });
     if (!tA.guardian?.passed) throw new Error('Guardian unexpectedly rejected safe trade');
     updateBudget('A', 100, 500);
-    showBadge('A', '✓ 交易通过', 'ok');
-    setCenter('✓', 'Guardian 放行<br>交易已在 Sui 上执行', 'ok');
-    eventLog('✓ Agent Alpha 100 MIST 交易执行成功 · 剩余预算 400 MIST');
+    showBadge('A', '✓ Trade Approved', 'ok');
+    setCenter('✓', 'Guardian Passed<br>Trade Executed on Sui', 'ok');
+    eventLog('✓ Agent Alpha 100 MIST trade executed · budget remaining: 400 MIST');
     hideTech();
-    showTech('PTB 原子执行 · 不可分拆', 'ptb');
+    showTech('PTB Atomic Execution · Sui Programmable Transaction Block', 'ptb');
     setProgress(75);
     await sleep(3500);
     hideTech();
 
     // ═══════════ PHASE 5: THE CONFLICT ═══════════
-    setPhase('5/5 · Guardian 拦截');
-    setTitle('Agent Bravo 尝试 600 MIST。<em>预算上限 100 MIST。Guardian 拒绝。</em>');
+    setPhase('5/5 · GUARDIAN INTERCEPTS');
+    setTitle('Agent Bravo attempts 600 MIST. <em>Budget cap: 100 MIST. Guardian blocks it.</em>');
     setSub(
-        '注意：这不是网关\"建议\"不通过——<em>Move 合约在 Sui 链上拒绝这笔交易</em>。资金在移动之前就被拦下。策略是链上代码，不是配置文件。',
-        'This is not the gateway "suggesting" no — <em>the Move contract rejects this transaction on Sui itself</em>. Funds are stopped before they move. Policy is on-chain code, not a config file.'
+        'This is not a gateway suggestion. <em>The Move contract rejects this transaction on Sui itself.</em> Funds are stopped before they move. Policy is on-chain code — not a config file, not a wish.',
+        'The budget cap is enforced by the Sui blockchain. No amount of agent cleverness can bypass it. This is programmable trust.'
     );
-    showTech('Move 合约拦截 · 链上执行', 'move');
-    setCenter('⚠️', '检测到超额请求…', 'warn');
-    eventLog('⚠️ Agent Bravo 尝试提取 600 MIST — 预算上限仅 100 MIST');
+    showTech('Move Contract Enforcement · On-Chain Rejection', 'move');
+    setCenter('⚠️', 'Overspend detected...', 'warn');
+    eventLog('⚠️ Agent Bravo attempting 600 MIST — budget cap is only 100 MIST');
     showAmount('B', 600);
     setProgress(82);
     await sleep(2500);
@@ -536,38 +535,36 @@ async function runDemo() {
     });
     const g = tB1.guardian || {};
     if (!g.passed) {
-        // SHOW ALERT
-        $('alert-reason').textContent = g.message || '预算超限';
+        $('alert-reason').textContent = g.message || 'Budget cap exceeded';
         $('alert-type').textContent = g.risk_type || 'BUDGET_EXCEEDED';
         $('alert-req').textContent = (g.requested || 600) + ' MIST';
         $('alert-allowed').textContent = (g.allowed || 100) + ' MIST';
         $('alert-code').textContent = g.reason || 'budget_cap';
         $('alert-card').classList.add('show');
-        showBadge('B', '✗ 被拦截', 'fail');
+        showBadge('B', '✗ BLOCKED', 'fail');
         hideTech();
-        showTech('策略违规 · 交易回滚', 'guardian');
-        setCenter('🛡️', 'GUARDIAN 拦截<br>交易被 Sui 链拒绝', 'warn');
+        showTech('Policy Violation · Transaction Reverted', 'guardian');
+        setCenter('🛡️', 'GUARDIAN INTERCEPTED<br>Transaction Rejected by Sui', 'warn');
         setSub(
-            'Guardian 拦截原因：<em>请求 600 MIST 超出预算上限 100 MIST</em>。这是 Move 合约在链上的裁决——不是建议，是强制执行。交易被 Sui 本身拒绝。',
-            'Why blocked: <em>requested 600 MIST exceeds budget cap of 100 MIST</em>. This is the Move contract ruling on-chain — not a suggestion, enforcement. Transaction rejected by Sui itself.'
+            '<em>Requested 600 MIST exceeds budget cap of 100 MIST.</em> The Move contract rejected this on Sui itself. Not a middleware decision — an on-chain ruling. Immutable. Unbypassable.',
+            'The Guardian detected the violation and the Move contract enforced it. This is what programmable settlement looks like.'
         );
-        eventLog('🛡️ GUARDIAN 拦截: 请求 600 MIST > 预算上限 100 MIST — 交易被拒绝');
+        eventLog('🛡️ GUARDIAN INTERCEPTED: 600 MIST > 100 MIST budget cap — transaction rejected');
         setProgress(90);
         await sleep(5000);
 
-        // Dismiss alert
         $('alert-card').classList.remove('show');
         hideTech();
         await sleep(800);
 
         // Recovery
-        setTitle('Agent Bravo 调整为 50 MIST。<em>预算内。Guardian 放行。</em>');
+        setTitle('Agent Bravo adjusts to 50 MIST. <em>Within budget. Guardian passes.</em>');
         setSub(
-            '策略不是要堵死 agent——而是引导。在限制内交易，路是通畅的。<em>Sui-Nexus 不是监狱，是护栏。</em>',
-            'Policy doesn\'t block agents — it channels them. Trade within limits, and the path is clear. <em>Sui-Nexus isn\'t a prison, it\'s a guardrail.</em>'
+            'Policy doesn\'t block agents — it channels them. Trade within limits, and the path is clear. <em>Sui-Nexus isn\'t a prison. It\'s a guardrail.</em>',
+            'The same Move contract that blocked the overspend now executes the compliant trade. Policy is consistent, predictable, and on-chain.'
         );
-        setCenter('🔄', 'Agent Bravo 调整中…');
-        eventLog('Agent Bravo: 调整为合规金额 50 MIST (预算上限 100 MIST)');
+        setCenter('🔄', 'Agent Bravo adjusts...');
+        eventLog('Agent Bravo: adjusting to compliant 50 MIST (within 100 MIST budget)');
         showAmount('B', 50);
         setProgress(93);
         await sleep(2200);
@@ -579,10 +576,10 @@ async function runDemo() {
         });
         if (tB2.guardian?.passed) {
             updateBudget('B', 50, 100);
-            showBadge('B', '✓ 交易通过', 'ok');
-            setCenter('✓', 'Guardian 放行<br>合规交易已执行', 'ok');
-            showTech('PTB 原子执行 · 链上确认', 'ptb');
-            eventLog('✓ Agent Bravo 50 MIST 合规交易执行成功 · 剩余预算 50 MIST');
+            showBadge('B', '✓ Trade Approved', 'ok');
+            setCenter('✓', 'Guardian Passed<br>Compliant Trade Executed', 'ok');
+            showTech('PTB Atomic Execution · On-Chain Confirmation', 'ptb');
+            eventLog('✓ Agent Bravo 50 MIST compliant trade executed · budget remaining: 50 MIST');
         }
         setProgress(97);
         await sleep(3000);
@@ -590,14 +587,14 @@ async function runDemo() {
     }
 
     // ═══════════ VICTORY ═══════════
-    setPhase('演示完成');
-    setTitle('<em>Sui 上每个 AI agent 都需要这个结算层。</em>');
+    setPhase('DEMO COMPLETE');
+    setTitle('<em>Every AI agent on Sui needs this settlement layer.</em>');
     setSub(
-        '策略控制钱包。Move 链上执行。Guardian 风险检查。全程可审计。<em>这就是 AI agent 经济的基础设施。</em>',
-        'Policy-controlled wallets. Move-enforced execution. Guardian risk checks. Fully auditable. <em>This is the infrastructure the AI agent economy needs.</em>'
+        'Policy-controlled wallets. Move-enforced execution. Guardian risk checks. Fully auditable. <em>This is the infrastructure the AI agent economy needs.</em>',
+        '1 transaction blocked. 2 executed safely. 100% on-chain policy enforcement. Sui-Nexus is ready.'
     );
-    setCenter('✅', 'Sui-Nexus Guardian<br>策略执行完毕 · 审计完成', 'ok');
-    eventLog('✓ 演示完成: 2 个 agent · 1 次拦截 · 1 次合规 · 100% 链上执行');
+    setCenter('✅', 'Sui-Nexus Guardian<br>Policy Enforced · Audit Complete', 'ok');
+    eventLog('✓ Demo complete: 2 agents · 1 blocked · 2 compliant · 100% on-chain enforcement');
     setProgress(100);
     await sleep(3000);
     $('victory-overlay').classList.remove('hidden');
@@ -605,11 +602,11 @@ async function runDemo() {
 
 // ── Init ──
 $('start-btn').addEventListener('click', () => {
-    $('start-btn').textContent = '启动中...';
+    $('start-btn').textContent = 'Starting...';
     $('start-btn').disabled = true;
     runDemo().catch(err => {
-        eventLog('错误: ' + err.message);
-        $('start-btn').textContent = '▶ 开始演示 Start Demo';
+        eventLog('Error: ' + err.message);
+        $('start-btn').textContent = '▶ Start Demo';
         $('start-btn').disabled = false;
     });
 });
@@ -618,10 +615,10 @@ $('start-btn').addEventListener('click', () => {
 (async function boot() {
     try {
         const h = await api('/health', null);
-        if (h.ready) setSub('网关就绪 — 点击 Start Demo 开始演示', 'Gateway ready — click Start Demo to begin');
-        else setSub('网关启动中...', 'Gateway starting...');
+        if (h.ready) setSub('Gateway ready — click Start Demo to begin', 'Sui-Nexus is running in demo mode on Sui Testnet');
+        else setSub('Gateway starting...', 'Waiting for gateway to become ready');
     } catch(_) {
-        setSub('等待网关启动... 请运行 go run ./cmd/gateway/', 'Waiting for gateway... run: go run ./cmd/gateway/');
+        setSub('Waiting for gateway...', 'Run: HACKATHON_DEMO_MODE=true go run ./cmd/gateway/');
     }
 })();
 </script>
