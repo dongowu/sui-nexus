@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="notranslate" translate="no">
+<html lang="zh" class="notranslate" translate="no">
 <head>
 <meta charset="UTF-8">
 <meta name="google" content="notranslate">
@@ -8,7 +8,6 @@
 <style>
     :root {
         --bg: #060606;
-        --panel: #0f0f0f;
         --line: #262626;
         --text: #edece8;
         --muted: #87847c;
@@ -16,59 +15,52 @@
         --green: #39b66a;
         --red: #e2554f;
         --amber: #d8a53d;
-        --purple: #a371f7;
         --cyan: #2fb7ad;
+        --purple: #a371f7;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-        background: var(--bg);
-        color: var(--text);
-        font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-        height: 100vh; overflow: hidden;
-        -webkit-font-smoothing: antialiased;
+        background: var(--bg); color: var(--text);
+        font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+        height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased;
     }
     .stage {
         display: flex; flex-direction: column; height: 100vh;
-        background: radial-gradient(ellipse at 50% 35%, rgba(79,140,255,.04) 0%, transparent 70%),
-                    radial-gradient(ellipse at 25% 70%, rgba(216,165,61,.03) 0%, transparent 50%),
-                    radial-gradient(ellipse at 75% 70%, rgba(226,85,79,.03) 0%, transparent 50%);
+        background: radial-gradient(ellipse at 50% 30%, rgba(79,140,255,.04) 0%, transparent 70%),
+                    radial-gradient(ellipse at 25% 65%, rgba(216,165,61,.03) 0%, transparent 50%),
+                    radial-gradient(ellipse at 75% 65%, rgba(226,85,79,.03) 0%, transparent 50%);
     }
 
     /* ── Top bar ── */
     .topbar {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 10px 28px; border-bottom: 1px solid var(--line);
+        padding: 8px 24px; border-bottom: 1px solid var(--line);
         background: rgba(10,10,10,.95); flex-shrink: 0; z-index: 10;
     }
-    .logo { font-size: 14px; font-weight: 700; letter-spacing: .5px; }
+    .logo { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
     .logo em { font-style: normal; color: var(--cyan); }
-    .phase-label {
-        font-size: 12px; color: var(--cyan); font-weight: 600;
-        letter-spacing: 1px; text-transform: uppercase;
+    .phase-badge {
+        font-size: 11px; color: var(--cyan); font-weight: 600;
+        letter-spacing: 1.5px; text-transform: uppercase;
+        background: rgba(47,183,173,.08); border: 1px solid rgba(47,183,173,.2);
+        border-radius: 999px; padding: 4px 14px;
         opacity: 0; transition: opacity .5s;
     }
-    .phase-label.on { opacity: 1; }
-    .status-dots { display: flex; gap: 14px; align-items: center; font-size: 11px; color: var(--muted); }
+    .phase-badge.on { opacity: 1; }
 
-    /* ── Narrative caption ── */
-    .caption-area {
-        flex-shrink: 0; padding: 16px 28px 0; text-align: center;
-        min-height: 70px; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 6px;
+    /* ── Title caption (top of arena) ── */
+    .title-caption {
+        flex-shrink: 0; text-align: center; padding: 18px 28px 6px;
+        min-height: 56px; display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
     }
-    .caption-main {
-        font-size: 22px; font-weight: 700; line-height: 1.4;
-        opacity: 0; transform: translateY(10px);
-        transition: opacity .6s, transform .6s;
-    }
-    .caption-main.on { opacity: 1; transform: translateY(0); }
-    .caption-sub {
-        font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 700px;
+    .title-main {
+        font-size: 18px; font-weight: 700; line-height: 1.4;
         opacity: 0; transform: translateY(8px);
-        transition: opacity .6s .1s, transform .6s .1s;
+        transition: opacity .5s, transform .5s;
     }
-    .caption-sub.on { opacity: 1; transform: translateY(0); }
-    .caption-hl { color: var(--cyan); }
+    .title-main.on { opacity: 1; transform: translateY(0); }
+    .title-main em { font-style: normal; color: var(--cyan); }
 
     /* ── Arena ── */
     .arena {
@@ -76,156 +68,162 @@
         gap: 0; min-height: 0; position: relative;
     }
     .agent-panel {
-        padding: 20px 28px; display: flex; flex-direction: column;
-        gap: 12px; justify-content: center;
+        padding: 14px 28px; display: flex; flex-direction: column;
+        gap: 8px; justify-content: center;
     }
     .agent-panel.left { align-items: flex-end; text-align: right; }
     .agent-panel.right { align-items: flex-start; text-align: left; }
 
     .agent-label {
-        font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
-        font-weight: 700; opacity: 0; transform: translateY(8px);
-        transition: opacity .5s .3s, transform .5s .3s;
+        font-size: 10px; text-transform: uppercase; letter-spacing: 2px;
+        font-weight: 700; opacity: 0; transform: translateY(6px);
+        transition: opacity .5s .2s, transform .5s .2s;
     }
     .agent-label.on { opacity: 1; transform: translateY(0); }
     .left .agent-label { color: var(--blue); }
     .right .agent-label { color: var(--amber); }
+    .agent-name { font-size: 17px; font-weight: 700; }
+    .agent-cap { font-size: 11px; color: var(--muted); }
 
-    .agent-name {
-        font-size: 20px; font-weight: 700; opacity: 0; transform: translateY(8px);
-        transition: opacity .5s .4s, transform .5s .4s;
-    }
-    .agent-name.on { opacity: 1; transform: translateY(0); }
-
-    .agent-role {
-        font-size: 12px; color: var(--muted); margin-bottom: 8px;
-        opacity: 0; transition: opacity .5s .5s;
-    }
-    .agent-role.on { opacity: 1; }
-
-    .budget-row { width: 100%; max-width: 220px; }
-    .budget-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .budget-row { width: 100%; max-width: 200px; margin-top: 6px; }
+    .budget-numbers { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-bottom: 3px; }
     .budget-bar {
-        height: 10px; border-radius: 999px; background: #111111;
-        border: 1px solid var(--line); overflow: hidden; width: 100%;
+        height: 8px; border-radius: 999px; background: #111; border: 1px solid var(--line);
+        overflow: hidden; width: 100%;
     }
-    .left .budget-bar-inner { background: linear-gradient(90deg, var(--blue), #7aafff); margin-left: auto; }
+    .budget-bar-inner { height: 100%; border-radius: 999px; transition: width 1.5s cubic-bezier(.4,0,.2,1); }
+    .left .budget-bar-inner { background: linear-gradient(90deg, var(--blue), #7aafff); }
     .right .budget-bar-inner { background: linear-gradient(90deg, var(--amber), #f0c964); }
-    .budget-bar-inner {
-        height: 100%; border-radius: 999px; transition: width 1.5s cubic-bezier(.4,0,.2,1);
-    }
-    .budget-value {
-        font-size: 12px; color: var(--muted); margin-top: 4px;
-    }
-    .budget-value strong { color: var(--text); }
 
     .tx-badge {
-        display: none; align-items: center; gap: 6px; padding: 6px 12px;
-        border-radius: 999px; font-size: 11px; font-weight: 600;
+        display: none; align-items: center; gap: 5px; padding: 5px 10px;
+        border-radius: 999px; font-size: 10px; font-weight: 600;
         border: 1px solid var(--line); background: #111;
     }
     .tx-badge.show { display: inline-flex; }
     .tx-badge.ok { color: var(--green); border-color: rgba(57,182,106,.4); }
     .tx-badge.fail { color: var(--red); border-color: rgba(226,85,79,.4); }
-    .tx-badge.pending { color: var(--amber); border-color: rgba(216,165,61,.4); }
 
     .big-amount {
-        display: none; font-size: 36px; font-weight: 900; line-height: 1;
-        opacity: 0; transition: opacity .4s;
+        display: none; font-size: 30px; font-weight: 900; line-height: 1;
+        opacity: 0; transition: opacity .4s; margin-top: 8px;
     }
     .big-amount.show { display: block; opacity: 1; }
     .left .big-amount { color: var(--blue); }
     .right .big-amount { color: var(--amber); }
-    .big-amount-unit { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+    .big-amount .unit { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 3px; }
 
     /* ── Center stage ── */
     .center-stage {
         display: flex; flex-direction: column; align-items: center;
-        justify-content: center; padding: 20px 12px;
+        justify-content: center; padding: 10px;
         background: rgba(10,10,10,.7); border-left: 1px solid var(--line);
-        border-right: 1px solid var(--line); position: relative; gap: 8px;
+        border-right: 1px solid var(--line); position: relative; gap: 4px;
     }
-    .center-icon { font-size: 52px; transition: all .5s; }
+    .center-icon { font-size: 48px; transition: all .5s; }
     .center-icon.warn { filter: hue-rotate(-140deg) brightness(1.3); animation: pulse 1s ease-in-out infinite; }
     .center-icon.ok { filter: hue-rotate(90deg) brightness(1.1); }
-    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-    .center-title {
-        font-size: 14px; font-weight: 700; text-align: center; line-height: 1.5;
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    .center-label {
+        font-size: 12px; font-weight: 600; text-align: center; line-height: 1.5;
         color: var(--text); transition: all .5s;
     }
 
     /* Guardian alert card */
     .alert-card {
         position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-        background: #0a0a0a; border: 2px solid var(--red); border-radius: 20px;
-        padding: 32px 36px; text-align: center; z-index: 10; min-width: 380px;
-        box-shadow: 0 0 80px rgba(226,85,79,.3), 0 0 160px rgba(226,85,79,.08);
+        background: #0a0a0a; border: 2px solid var(--red); border-radius: 18px;
+        padding: 28px 32px; text-align: center; z-index: 10; min-width: 360px;
+        box-shadow: 0 0 70px rgba(226,85,79,.3), 0 0 140px rgba(226,85,79,.08);
         animation: alertIn .4s cubic-bezier(.4,0,.2,1), alertGlow 1.5s ease-in-out infinite .4s;
         opacity: 0; pointer-events: none;
     }
     .alert-card.show { opacity: 1; pointer-events: auto; }
     @keyframes alertIn { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.92); } 100% { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
-    @keyframes alertGlow { 0%,100% { box-shadow: 0 0 60px rgba(226,85,79,.25); } 50% { box-shadow: 0 0 120px rgba(226,85,79,.5); } }
-    .alert-icon { font-size: 56px; margin-bottom: 10px; }
-    .alert-title { font-size: 18px; font-weight: 800; color: var(--red); margin-bottom: 8px; letter-spacing: 1px; }
-    .alert-reason { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
-    .alert-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; }
+    @keyframes alertGlow { 0%,100% { box-shadow: 0 0 50px rgba(226,85,79,.25); } 50% { box-shadow: 0 0 100px rgba(226,85,79,.5); } }
+    .alert-icon { font-size: 50px; margin-bottom: 8px; }
+    .alert-title { font-size: 17px; font-weight: 800; color: var(--red); margin-bottom: 6px; letter-spacing: 1px; }
+    .alert-reason { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+    .alert-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; }
     .alert-grid .lbl { color: var(--muted); text-align: right; }
     .alert-grid .val { color: var(--text); font-weight: 700; text-align: left; }
     .alert-grid .val.bad { color: var(--red); }
 
-    /* Overlay */
+    /* ── Subtitle track (the key addition) ── */
+    .subtitle-track {
+        flex-shrink: 0; background: rgba(0,0,0,.85); border-top: 1px solid var(--line);
+        padding: 10px 28px; text-align: center; min-height: 56px;
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 4px;
+    }
+    .sub-zh {
+        font-size: 15px; font-weight: 600; color: #fff; line-height: 1.4;
+        opacity: 0; transform: translateY(6px);
+        transition: opacity .4s, transform .4s;
+    }
+    .sub-zh.on { opacity: 1; transform: translateY(0); }
+    .sub-en {
+        font-size: 11px; color: var(--muted); line-height: 1.4;
+        opacity: 0; transform: translateY(4px);
+        transition: opacity .4s .1s, transform .4s .1s;
+    }
+    .sub-en.on { opacity: 1; transform: translateY(0); }
+    .sub-zh em, .sub-en em { font-style: normal; color: var(--cyan); }
+
+    /* ── Tech callout (pops near center) ── */
+    .tech-callout {
+        position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
+        font-size: 10px; font-weight: 700; letter-spacing: 1px;
+        padding: 4px 12px; border-radius: 999px;
+        border: 1px solid var(--line);
+        opacity: 0; transition: opacity .4s; z-index: 5;
+        white-space: nowrap;
+        background: rgba(10,10,10,.9);
+    }
+    .tech-callout.on { opacity: 1; }
+    .tech-callout.move { color: var(--purple); border-color: rgba(163,113,247,.3); }
+    .tech-callout.ptb { color: var(--cyan); border-color: rgba(47,183,173,.3); }
+    .tech-callout.guardian { color: var(--amber); border-color: rgba(216,165,61,.3); }
+    .tech-callout.walrus { color: var(--blue); border-color: rgba(77,138,255,.3); }
+
+    /* ── Event bar (thin, bottom) ── */
+    .event-bar {
+        flex-shrink: 0; height: 32px; border-top: 1px solid var(--line);
+        background: #0d0d0d; display: flex; align-items: center;
+        padding: 0 24px; font-size: 10px; color: var(--muted); gap: 12px;
+    }
+    .event-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Overlays ── */
     .overlay {
-        position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 100;
+        position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 100;
         display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px;
         transition: opacity .6s;
     }
     .overlay.hidden { opacity: 0; pointer-events: none; }
-    .overlay-title { font-size: 36px; font-weight: 900; text-align: center; line-height: 1.3; }
+    .overlay-title { font-size: 34px; font-weight: 900; text-align: center; line-height: 1.3; }
     .overlay-title em { font-style: normal; color: var(--cyan); }
     .overlay-sub {
-        font-size: 15px; color: var(--muted); text-align: center; max-width: 520px;
-        line-height: 1.7;
+        font-size: 14px; color: var(--muted); text-align: center; max-width: 560px;
+        line-height: 1.8;
     }
     .overlay-sub strong { color: var(--text); }
+    .overlay-sub .zh { font-size: 15px; color: #fff; display: block; margin-bottom: 6px; }
     .overlay-btn {
         background: #fff; color: #000; border: none; border-radius: 10px;
         padding: 16px 48px; font-size: 16px; font-weight: 700; cursor: pointer;
         font-family: inherit; letter-spacing: .5px; margin-top: 8px;
-        transition: transform .2s, opacity .2s;
     }
-    .overlay-btn:hover { transform: scale(1.03); opacity: .9; }
+    .overlay-btn:hover { transform: scale(1.03); }
 
-    /* Footer event bar */
-    .event-bar {
-        flex-shrink: 0; height: 44px; border-top: 1px solid var(--line);
-        background: #0d0d0d; display: flex; align-items: center; padding: 0 28px;
-        font-size: 11px; color: var(--muted); gap: 16px; overflow: hidden;
-    }
-    .event-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .event-dot.blue { background: var(--blue); }
-    .event-dot.amber { background: var(--amber); }
-    .event-dot.green { background: var(--green); }
-    .event-dot.red { background: var(--red); }
-    .event-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    /* Progress bar */
     .progress-bar {
         position: fixed; top: 0; left: 0; height: 2px; background: var(--cyan);
         transition: width .5s ease; z-index: 200;
     }
 
-    /* Stats popup */
-    .stat-pop {
-        position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-        font-size: 12px; font-weight: 700; color: var(--cyan); letter-spacing: 1px;
-        opacity: 0; transition: opacity .5s; z-index: 5;
-    }
-    .stat-pop.on { opacity: 1; }
-
     @media (max-width: 960px) {
         .arena { grid-template-columns: 1fr; }
-        .center-stage { border-left: none; border-right: none; padding: 12px; }
+        .center-stage { border-left: none; border-right: none; }
         .alert-card { min-width: auto; width: 90%; }
     }
 </style>
@@ -237,30 +235,27 @@
 <div class="stage">
     <!-- Top bar -->
     <div class="topbar">
-        <div class="logo"><em>Sui-Nexus</em> <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:8px;">Sui Overflow 2026</span></div>
-        <div class="phase-label" id="phase-label">Phase 0</div>
-        <div class="status-dots">
-            <span style="color:var(--green)">●</span> Sui Testnet
-            <span style="color:var(--muted)">│</span>
-            Move Enforced
+        <div class="logo"><em>Sui-Nexus</em> <span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px;">Sui Overflow 2026</span></div>
+        <div class="phase-badge" id="phase-badge">WAITING</div>
+        <div style="font-size:10px;color:var(--muted)">
+            <span style="color:var(--green)">●</span> Sui Testnet &nbsp;│&nbsp; Move Enforced
         </div>
     </div>
 
-    <!-- Narrative caption -->
-    <div class="caption-area">
-        <div class="caption-main" id="caption-main"></div>
-        <div class="caption-sub" id="caption-sub"></div>
+    <!-- Title caption -->
+    <div class="title-caption">
+        <div class="title-main" id="title-main"></div>
     </div>
 
     <!-- Arena -->
-    <div class="arena">
+    <div class="arena" id="arena">
         <!-- Agent Alpha -->
         <div class="agent-panel left" id="panel-a">
             <div class="agent-label" id="label-a">Agent Alpha</div>
             <div class="agent-name" id="name-a">Trading AI</div>
-            <div class="agent-role" id="role-a">Authorized · Budget 500 MIST</div>
+            <div class="agent-cap">预算 500 MIST · DeepBook</div>
             <div class="budget-row">
-                <div class="budget-header"><span>Remaining</span><span id="budget-a-text">500 MIST</span></div>
+                <div class="budget-numbers"><span>剩余</span><span id="budget-a-text">500 MIST</span></div>
                 <div class="budget-bar"><div class="budget-bar-inner" id="budget-a-bar" style="width:100%"></div></div>
             </div>
             <div class="tx-badge" id="badge-a"></div>
@@ -269,17 +264,18 @@
 
         <!-- Center -->
         <div class="center-stage" id="center-stage">
+            <div class="tech-callout" id="tech-callout"></div>
             <div class="center-icon" id="center-icon">◈</div>
-            <div class="center-title" id="center-title">Sui-Nexus Guardian</div>
+            <div class="center-label" id="center-label">Sui-Nexus Guardian<br>链上策略执行层</div>
             <div class="alert-card" id="alert-card">
                 <div class="alert-icon">🛡️</div>
-                <div class="alert-title">GUARDIAN INTERCEPTED</div>
+                <div class="alert-title">GUARDIAN 拦截</div>
                 <div class="alert-reason" id="alert-reason"></div>
                 <div class="alert-grid">
-                    <span class="lbl">Risk Type</span><span style="color:var(--red);font-weight:700;" id="alert-type">-</span>
-                    <span class="lbl">Requested</span><span class="val bad" id="alert-req">-</span>
-                    <span class="lbl">Allowed</span><span class="val" id="alert-allowed">-</span>
-                    <span class="lbl">Reason</span><span id="alert-code" style="color:var(--amber)">-</span>
+                    <span class="lbl">风险类型</span><span style="color:var(--red);font-weight:700;" id="alert-type">-</span>
+                    <span class="lbl">请求金额</span><span class="val bad" id="alert-req">-</span>
+                    <span class="lbl">允许上限</span><span class="val" id="alert-allowed">-</span>
+                    <span class="lbl">拦截原因</span><span id="alert-code" style="color:var(--amber)">-</span>
                 </div>
             </div>
         </div>
@@ -288,9 +284,9 @@
         <div class="agent-panel right" id="panel-b">
             <div class="agent-label" id="label-b">Agent Bravo</div>
             <div class="agent-name" id="name-b">Trading AI</div>
-            <div class="agent-role" id="role-b">Authorized · Budget 100 MIST</div>
+            <div class="agent-cap">预算 100 MIST · DeepBook</div>
             <div class="budget-row">
-                <div class="budget-header"><span>Remaining</span><span id="budget-b-text">100 MIST</span></div>
+                <div class="budget-numbers"><span>剩余</span><span id="budget-b-text">100 MIST</span></div>
                 <div class="budget-bar"><div class="budget-bar-inner" id="budget-b-bar" style="width:100%"></div></div>
             </div>
             <div class="tx-badge" id="badge-b"></div>
@@ -298,302 +294,334 @@
         </div>
     </div>
 
+    <!-- Subtitle track -->
+    <div class="subtitle-track">
+        <div class="sub-zh" id="sub-zh">等待网关启动...</div>
+        <div class="sub-en" id="sub-en">Waiting for gateway...</div>
+    </div>
+
     <!-- Event bar -->
     <div class="event-bar" id="event-bar">
-        <span style="color:var(--muted)">●</span>
-        <span class="event-text">Waiting for gateway...</span>
+        <span style="color:var(--muted)">●</span> 系统就绪 — 点击 Start Demo 开始演示
     </div>
 </div>
 
 <!-- Opening overlay -->
 <div class="overlay" id="opening-overlay">
-    <div class="overlay-title">AI Agents Need<br>a <em>Settlement Layer</em></div>
+    <div class="overlay-title">AI 智能体需要<br>一个<em>结算层</em></div>
     <div class="overlay-sub">
-        AI agents today can generate trading strategies.<br>
-        But <strong>who holds the keys? Who sets the limits? Who audits the trail?</strong><br><br>
-        <em>Sui-Nexus</em> gives every AI agent on Sui a <strong>policy-controlled wallet</strong>.<br>
-        Budget caps. Protocol scope. Time windows.<br>
-        All <strong>enforced on-chain in Move</strong>. Not in middleware. On Sui itself.
+        <span class="zh">现在的 AI agent 能生成交易策略，但<strong>谁来管钱？谁设限制？谁留审计？</strong></span>
+        Sui-Nexus 给 Sui 上的每个 AI agent 一个<strong>策略控制的钱包</strong>。<br>
+        预算上限、协议范围、时间窗口——<strong>全部在 Move 合约里链上执行</strong>。<br>
+        不是中间件允不允许的问题，是 Sui 本身同不同意。
     </div>
-    <button class="overlay-btn" id="start-btn">▶ Start Demo</button>
+    <button class="overlay-btn" id="start-btn">▶ 开始演示 Start Demo</button>
 </div>
 
 <!-- Victory overlay -->
 <div class="overlay hidden" id="victory-overlay">
-    <div class="overlay-title">Every AI Agent on Sui<br>Needs <em>Sui-Nexus</em></div>
+    <div class="overlay-title">Sui 上每个 AI agent<br>都需要 <em>Sui-Nexus</em></div>
     <div class="overlay-sub">
-        <strong>Policy-controlled wallets.</strong> Move-enforced execution. Guardian risk checks.<br>
-        Every trade is auditable. Every policy violation is visible.<br>
-        This is the infrastructure the AI agent economy needs.<br><br>
-        <em>Deployed on Sui Testnet · Sui Overflow 2026</em>
+        <span class="zh">策略控制钱包 · Move 链上执行 · Guardian 风险检查 · 全程可审计</span>
+        Policy-controlled wallets. Move-enforced execution. Guardian risk checks.<br>
+        Fully auditable. Every trade traceable on Sui.<br><br>
+        <strong style="color:var(--cyan)">Deployed on Sui Testnet · Sui Overflow 2026</strong><br>
+        <span style="font-size:11px;word-break:break-all">0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d</span>
     </div>
 </div>
 
 <script>
 const API = 'http://localhost:8080';
-const MIST_SUI = 1_000_000_000;
 const TOKEN = 'demo-session-token';
-let walletA = '', walletB = '', phase = 0;
+let walletA = '', walletB = '';
 
-// ── DOM helpers ──
 function $(id) { return document.getElementById(id); }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ── Caption system ──
-function setCaption(main, sub) {
-    const cm = $('caption-main'), cs = $('caption-sub');
-    cm.classList.remove('on'); cs.classList.remove('on');
-    setTimeout(() => { cm.textContent = main; cs.textContent = sub; }, 200);
-    setTimeout(() => { cm.classList.add('on'); cs.classList.add('on'); }, 300);
+// ── Subtitle system ──
+function setSub(zh, en) {
+    const z = $('sub-zh'), e = $('sub-en');
+    z.classList.remove('on'); e.classList.remove('on');
+    setTimeout(() => { z.innerHTML = zh; e.innerHTML = en; }, 180);
+    setTimeout(() => { z.classList.add('on'); e.classList.add('on'); }, 280);
 }
 
-function setPhase(label) {
-    const el = $('phase-label');
+// ── Title caption ──
+function setTitle(text) {
+    const el = $('title-main');
     el.classList.remove('on');
-    setTimeout(() => { el.textContent = label; el.classList.add('on'); }, 200);
+    setTimeout(() => { el.innerHTML = text; el.classList.add('on'); }, 150);
 }
 
-function setProgress(pct) {
-    $('progress').style.width = pct + '%';
+// ── Phase badge ──
+function setPhase(text) {
+    const el = $('phase-badge');
+    el.classList.remove('on');
+    setTimeout(() => { el.textContent = text; el.classList.add('on'); }, 150);
 }
+
+// ── Progress bar ──
+function setProgress(pct) { $('progress').style.width = pct + '%'; }
 
 // ── Event bar ──
-function eventLog(msg) {
-    const bar = $('event-bar');
-    const colors = {A:'var(--blue)', B:'var(--amber)', ok:'var(--green)', fail:'var(--red)', info:'var(--muted)'};
-    const color = colors[msg.charAt(0)] || colors.info;
-    bar.innerHTML = `<span style="color:${color};flex-shrink:0;">●</span> <span class="event-text">${msg}</span>`;
-}
+function eventLog(msg) { $('event-bar').innerHTML = '<span style="color:var(--muted)">●</span> ' + msg; }
 
-// ── Agent panel updates ──
-function showAgent(panelId) {
-    const p = panelId === 'A' ? 'a' : 'b';
-    ['label', 'name', 'role'].forEach(c => $(`${c}-${p}`).classList.add('on'));
+// ── Tech callout ──
+function showTech(text, cls) {
+    const el = $('tech-callout');
+    el.textContent = text; el.className = 'tech-callout ' + (cls || '');
+    el.classList.add('on');
 }
+function hideTech() { $('tech-callout').classList.remove('on'); }
 
+// ── Agent panel ──
+function showAgent(agent) {
+    const p = agent.toLowerCase();
+    $('label-' + p).classList.add('on');
+}
 function updateBudget(agent, spent, cap) {
     const p = agent.toLowerCase();
-    const remaining = cap - spent;
-    const pct = cap > 0 ? Math.max(0, (remaining / cap) * 100) : 0;
-    $(`budget-${p}-text`).textContent = remaining + ' MIST';
-    $(`budget-${p}-bar`).style.width = pct + '%';
+    const rem = cap - spent;
+    const pct = cap > 0 ? Math.max(0, (rem / cap) * 100) : 0;
+    $('budget-' + p + '-text').textContent = rem + ' MIST';
+    $('budget-' + p + '-bar').style.width = pct + '%';
 }
-
 function showBadge(agent, text, cls) {
-    const b = $(`badge-${agent.toLowerCase()}`);
+    const b = $('badge-' + agent.toLowerCase());
     b.textContent = text; b.className = 'tx-badge show ' + cls;
 }
-
 function showAmount(agent, mist) {
-    const el = $(`amount-${agent.toLowerCase()}`);
-    el.innerHTML = mist + '<span class="big-amount-unit">MIST</span>';
+    const el = $('amount-' + agent.toLowerCase());
+    el.innerHTML = mist + '<span class="unit">MIST</span>';
     el.classList.add('show');
 }
 
-// ── Center updates ──
-function setCenter(icon, title, cls) {
+// ── Center ──
+function setCenter(icon, label, cls) {
     $('center-icon').textContent = icon;
     $('center-icon').className = 'center-icon ' + (cls || '');
-    $('center-title').textContent = title;
+    $('center-label').innerHTML = label;
 }
 
-// ── API calls ──
+// ── API ──
 async function api(path, body) {
-    const res = await fetch(API + path, {
+    const r = await fetch(API + path, {
         method: body ? 'POST' : 'GET',
         headers: body ? {'Content-Type': 'application/json'} : {},
         body: body ? JSON.stringify(body) : undefined
     });
-    return res.json();
+    return r.json();
 }
 
-// ── Main demo sequence ──
+// ── MAIN DEMO ──
 async function runDemo() {
     $('opening-overlay').classList.add('hidden');
-    await sleep(800);
+    await sleep(600);
 
-    // ─── PHASE 1: The Problem ───
-    setPhase('Phase 1/5 · THE PROBLEM');
-    setCaption(
-        'AI agents can generate strategies. But who holds the keys?',
-        'Without a settlement layer, agents either get unlimited custody — or can\'t spend at all. Both are broken.'
+    // ═══════════ PHASE 1: THE PROBLEM ═══════════
+    setPhase('1/5 · 问题');
+    setTitle('AI agent 能生成交易策略。<br>但<em>谁来管钱？谁来设限？谁来审计？</em>');
+    setSub(
+        '没有结算层的 AI agent 只有两个选择：无限托管权限（随时可能出事故），或者根本不能花钱。两个都是死路。',
+        'Without a settlement layer, AI agents either get unlimited custody — or can\'t spend at all. Both paths lead nowhere.'
     );
+    setCenter('◈', 'Sui-Nexus<br>AI Agent 结算层');
+    eventLog('Sui-Nexus: 让 AI agent 在 Sui 上安全地花钱');
     setProgress(5);
-    eventLog('info: The AI agent economy needs programmable settlement on-chain');
-    await sleep(6000);
+    await sleep(5500);
 
-    // ─── PHASE 2: The Solution ───
-    setPhase('Phase 2/5 · THE SOLUTION');
-    setCaption(
-        'Sui-Nexus: Policy-controlled wallets. Guardian risk checks. Move-enforced execution.',
-        'Every agent gets a wallet with budget caps, protocol scope, and time windows — enforced by Sui\'s Move VM, not middleware.'
+    // ═══════════ PHASE 2: THE SOLUTION ═══════════
+    setPhase('2/5 · 方案');
+    setTitle('<em>策略控制钱包</em> + Guardian 风险检查 + <em>Move 链上执行</em>');
+    setSub(
+        '每个 agent 得到一个 Move 智能合约钱包——预算上限、协议白名单、时间窗口。网关做预检（滑点、余额），<em>Move 合约做最终裁决</em>。不是\"中间件允许\"，是 Sui 链自己同意。',
+        'Every agent gets a Move smart contract wallet — budget caps, protocol scope, time windows. Gateway pre-checks slippage & balance. <em>Move contract is the final enforcer</em> — not middleware saying no, Sui itself saying no.'
     );
-    setCenter('◈', 'Sui-Nexus Guardian\nMove-Enforced Policy Layer');
-    setProgress(15);
-    eventLog('info: Sui-Nexus = HMAC auth + Guardian risk checks + Move policy + PTB execution + Walrus audit');
-    await sleep(7000);
+    showTech('Move 智能合约 · 不可绕过', 'move');
+    setCenter('◈', '双层架构<br>网关预检 + Move 裁决');
+    eventLog('架构: HMAC认证 → Guardian预检 → Move策略执行 → PTB交易 → Walrus审计');
+    setProgress(18);
+    await sleep(6500);
+    hideTech();
 
-    // ─── PHASE 3: Setup ──
-    setPhase('Phase 3/5 · SETUP');
-    setCaption(
-        'Two AI agents. Two policy wallets. Different budget limits.',
-        'Agent Alpha: 500 MIST budget. Agent Bravo: 100 MIST budget. Both authorized for DeepBook. Both enforced by the same Move contract.'
+    // ═══════════ PHASE 3: SETUP ═══════════
+    setPhase('3/5 · 部署');
+    setTitle('两个 AI agent。两个策略钱包。<em>不同的预算上限。</em>');
+    setSub(
+        'Agent Alpha 预算 500 MIST。Agent Bravo 预算 100 MIST。都在 DeepBook 协议白名单中。都由<em>同一个 Move 合约</em>强制执行策略。',
+        'Agent Alpha: 500 MIST budget. Agent Bravo: 100 MIST budget. Both whitelisted for DeepBook. Both enforced by <em>the same Move contract</em>.'
     );
-    setCenter('⏳', 'Creating wallets...');
+    setCenter('⏳', '创建策略钱包…');
     setProgress(25);
-    eventLog('A: Creating Agent Alpha wallet (budget 500 MIST)...');
-    await sleep(1500);
+    eventLog('正在为 Agent Alpha 创建钱包 (预算 500 MIST)...');
+    await sleep(2000);
 
-    const resA = await api('/api/v1/wallet/create', {
+    const rA = await api('/api/v1/wallet/create', {
         agent_address: '0xAlice', budget_cap_mist: 500,
         allowed_protocols: ['DeepBook'], time_end_epoch: 999999
     });
-    if (resA.error) throw new Error(resA.error.message);
-    walletA = resA.wallet_id;
+    if (rA.error) throw new Error(rA.error.message);
+    walletA = rA.wallet_id;
     showAgent('A');
     updateBudget('A', 0, 500);
-    showBadge('A', 'Wallet Created', 'ok');
-    eventLog('A: Wallet Alpha created ✓ · budget 500 MIST');
+    showBadge('A', '✓ 钱包已创建', 'ok');
+    eventLog('✓ Agent Alpha 钱包创建成功 · 预算 500 MIST · 链上确认');
     setProgress(35);
     await sleep(1200);
 
-    eventLog('B: Creating Agent Bravo wallet (budget 100 MIST)...');
-    const resB = await api('/api/v1/wallet/create', {
+    const rB = await api('/api/v1/wallet/create', {
         agent_address: '0xBob', budget_cap_mist: 100,
         allowed_protocols: ['DeepBook'], time_end_epoch: 999999
     });
-    if (resB.error) throw new Error(resB.error.message);
-    walletB = resB.wallet_id;
+    if (rB.error) throw new Error(rB.error.message);
+    walletB = rB.wallet_id;
     showAgent('B');
     updateBudget('B', 0, 100);
-    showBadge('B', 'Wallet Created', 'ok');
-    eventLog('B: Wallet Bravo created ✓ · budget 100 MIST');
-    setCenter('◈', 'Two wallets ready\nGuardian standing by');
-    setProgress(45);
+    showBadge('B', '✓ 钱包已创建', 'ok');
+    eventLog('✓ Agent Bravo 钱包创建成功 · 预算 100 MIST · 链上确认');
+    showTech('Move 策略在链上 · 不可绕过', 'move');
+    setCenter('◈', '两个钱包就绪<br>Guardian 待命');
+    setProgress(48);
+    await sleep(3000);
+    hideTech();
+
+    // ═══════════ PHASE 4: SAFE TRADE ═══════════
+    setPhase('4/5 · 正常交易');
+    setTitle('Agent Alpha 提交 100 MIST 交易。<em>预算内、协议内、Guardian 放行。</em>');
+    setSub(
+        '网关 Guardian 预检：滑点 < 5% ✓ 余额充足 ✓ 协议在白名单 ✓ → <em>Move 合约原子执行 PTB</em> → Sui 链上确认。全程不到一秒。',
+        'Gateway Guardian pre-check: slippage < 5% ✓ balance sufficient ✓ protocol whitelisted ✓ → <em>Move contract atomically executes PTB</em> → Sui on-chain confirmation. Under one second.'
+    );
+    showTech('Guardian 风险引擎 · 三重检查', 'guardian');
+    setCenter('→', '收到交易请求…');
+    eventLog('Agent Alpha: 提交 100 MIST 交易 → DeepBook');
+    showAmount('A', 100);
+    setProgress(60);
     await sleep(2500);
 
-    // ─── PHASE 4: Safe Trade ───
-    setPhase('Phase 4/5 · SAFE TRADE');
-    setCaption(
-        'Agent Alpha submits a 100 MIST trade. Within budget. Within protocol. Guardian passes.',
-        'The gateway pre-checks slippage and budget. Then Move executes the PTB atomically on Sui.'
-    );
-    setCenter('→', 'Incoming trade...');
-    eventLog('A: Submitting trade — 100 MIST on DeepBook...');
-    showAmount('A', 100);
-    setProgress(55);
-    await sleep(2000);
-
-    const tradeA = await api('/api/v1/wallet/execute', {
+    const tA = await api('/api/v1/wallet/execute', {
         wallet_id: walletA, amount_mist: 100, protocol: 'DeepBook',
         expected_price: 1000, description: 'Alpha swap',
         session_token: TOKEN, user_address: '0xAlice'
     });
-    if (!tradeA.guardian?.passed) throw new Error('Unexpected guardian rejection');
+    if (!tA.guardian?.passed) throw new Error('Guardian unexpectedly rejected safe trade');
     updateBudget('A', 100, 500);
-    showBadge('A', '✓ Trade Approved', 'ok');
-    setCenter('✓', 'Guardian Passed\nTrade Executed on Sui', 'ok');
-    eventLog('A: Guardian passed ✓ · trade 100 MIST executed · budget remaining 400 MIST');
-    setProgress(70);
+    showBadge('A', '✓ 交易通过', 'ok');
+    setCenter('✓', 'Guardian 放行<br>交易已在 Sui 上执行', 'ok');
+    eventLog('✓ Agent Alpha 100 MIST 交易执行成功 · 剩余预算 400 MIST');
+    hideTech();
+    showTech('PTB 原子执行 · 不可分拆', 'ptb');
+    setProgress(75);
     await sleep(3500);
+    hideTech();
 
-    // ─── PHASE 5: THE CONFLICT ───
-    setPhase('Phase 5/5 · GUARDIAN INTERCEPTS');
-    setCaption(
-        'Agent Bravo attempts 600 MIST. Budget cap: 100 MIST. Guardian blocks it.',
-        'The Move contract rejects the transaction before funds can move. Policy is on-chain — not a suggestion.'
+    // ═══════════ PHASE 5: THE CONFLICT ═══════════
+    setPhase('5/5 · Guardian 拦截');
+    setTitle('Agent Bravo 尝试 600 MIST。<em>预算上限 100 MIST。Guardian 拒绝。</em>');
+    setSub(
+        '注意：这不是网关\"建议\"不通过——<em>Move 合约在 Sui 链上拒绝这笔交易</em>。资金在移动之前就被拦下。策略是链上代码，不是配置文件。',
+        'This is not the gateway "suggesting" no — <em>the Move contract rejects this transaction on Sui itself</em>. Funds are stopped before they move. Policy is on-chain code, not a config file.'
     );
-    setCenter('⚠️', 'Overspend detected...', 'warn');
-    eventLog('B: WARNING — attempting 600 MIST but budget cap is only 100 MIST...');
+    showTech('Move 合约拦截 · 链上执行', 'move');
+    setCenter('⚠️', '检测到超额请求…', 'warn');
+    eventLog('⚠️ Agent Bravo 尝试提取 600 MIST — 预算上限仅 100 MIST');
     showAmount('B', 600);
-    setProgress(80);
-    await sleep(2200);
+    setProgress(82);
+    await sleep(2500);
 
-    const tradeB1 = await api('/api/v1/wallet/execute', {
+    const tB1 = await api('/api/v1/wallet/execute', {
         wallet_id: walletB, amount_mist: 600, protocol: 'DeepBook',
-        expected_price: 1000, description: 'Bravo overspend attempt',
+        expected_price: 1000, description: 'Bravo overspend',
         session_token: TOKEN, user_address: '0xBob'
     });
-    const guardian = tradeB1.guardian || {};
-    if (!guardian.passed) {
-        // TRIGGER ALERT
-        const card = $('alert-card');
-        $('alert-reason').textContent = guardian.message || 'Budget cap exceeded';
-        $('alert-type').textContent = guardian.risk_type || 'BUDGET_EXCEEDED';
-        $('alert-req').textContent = (guardian.requested || 600) + ' MIST';
-        $('alert-allowed').textContent = (guardian.allowed || 100) + ' MIST';
-        $('alert-code').textContent = guardian.reason || 'budget_cap';
-        card.classList.add('show');
-
-        showBadge('B', '✗ BLOCKED', 'fail');
-        setCenter('🛡️', 'GUARDIAN INTERCEPTED\nTransaction Rejected On-Chain', 'warn');
-        eventLog('B: GUARDIAN BLOCKED ✗ · ' + guardian.message);
+    const g = tB1.guardian || {};
+    if (!g.passed) {
+        // SHOW ALERT
+        $('alert-reason').textContent = g.message || '预算超限';
+        $('alert-type').textContent = g.risk_type || 'BUDGET_EXCEEDED';
+        $('alert-req').textContent = (g.requested || 600) + ' MIST';
+        $('alert-allowed').textContent = (g.allowed || 100) + ' MIST';
+        $('alert-code').textContent = g.reason || 'budget_cap';
+        $('alert-card').classList.add('show');
+        showBadge('B', '✗ 被拦截', 'fail');
+        hideTech();
+        showTech('策略违规 · 交易回滚', 'guardian');
+        setCenter('🛡️', 'GUARDIAN 拦截<br>交易被 Sui 链拒绝', 'warn');
+        setSub(
+            'Guardian 拦截原因：<em>请求 600 MIST 超出预算上限 100 MIST</em>。这是 Move 合约在链上的裁决——不是建议，是强制执行。交易被 Sui 本身拒绝。',
+            'Why blocked: <em>requested 600 MIST exceeds budget cap of 100 MIST</em>. This is the Move contract ruling on-chain — not a suggestion, enforcement. Transaction rejected by Sui itself.'
+        );
+        eventLog('🛡️ GUARDIAN 拦截: 请求 600 MIST > 预算上限 100 MIST — 交易被拒绝');
         setProgress(90);
-        await sleep(4500);
+        await sleep(5000);
 
         // Dismiss alert
-        card.classList.remove('show');
+        $('alert-card').classList.remove('show');
+        hideTech();
         await sleep(800);
 
         // Recovery
-        setCenter('🔄', 'Agent Bravo adjusts...');
-        setCaption(
-            'Agent Bravo adjusts to 50 MIST. Within budget. Guardian passes.',
-            'Policy doesn\'t block agents — it channels them. Trade within limits, and the path is clear.'
+        setTitle('Agent Bravo 调整为 50 MIST。<em>预算内。Guardian 放行。</em>');
+        setSub(
+            '策略不是要堵死 agent——而是引导。在限制内交易，路是通畅的。<em>Sui-Nexus 不是监狱，是护栏。</em>',
+            'Policy doesn\'t block agents — it channels them. Trade within limits, and the path is clear. <em>Sui-Nexus isn\'t a prison, it\'s a guardrail.</em>'
         );
-        eventLog('B: Adjusting trade to 50 MIST (within 100 MIST budget)...');
+        setCenter('🔄', 'Agent Bravo 调整中…');
+        eventLog('Agent Bravo: 调整为合规金额 50 MIST (预算上限 100 MIST)');
         showAmount('B', 50);
         setProgress(93);
-        await sleep(2000);
+        await sleep(2200);
 
-        const tradeB2 = await api('/api/v1/wallet/execute', {
+        const tB2 = await api('/api/v1/wallet/execute', {
             wallet_id: walletB, amount_mist: 50, protocol: 'DeepBook',
-            expected_price: 1000, description: 'Bravo compliant trade',
+            expected_price: 1000, description: 'Bravo compliant',
             session_token: TOKEN, user_address: '0xBob'
         });
-        if (tradeB2.guardian?.passed) {
+        if (tB2.guardian?.passed) {
             updateBudget('B', 50, 100);
-            showBadge('B', '✓ Trade Approved', 'ok');
-            setCenter('✓', 'Guardian Passed\nCompliant Trade Executed', 'ok');
-            eventLog('B: Guardian passed ✓ · trade 50 MIST executed · budget remaining 50 MIST');
+            showBadge('B', '✓ 交易通过', 'ok');
+            setCenter('✓', 'Guardian 放行<br>合规交易已执行', 'ok');
+            showTech('PTB 原子执行 · 链上确认', 'ptb');
+            eventLog('✓ Agent Bravo 50 MIST 合规交易执行成功 · 剩余预算 50 MIST');
         }
         setProgress(97);
         await sleep(3000);
+        hideTech();
     }
 
-    // ─── VICTORY ───
-    setPhase('DEMO COMPLETE');
-    setCaption(
-        'Every AI agent on Sui needs this settlement layer.',
-        'Policy-controlled wallets. Move-enforced execution. Guardian risk checks. Fully auditable.'
+    // ═══════════ VICTORY ═══════════
+    setPhase('演示完成');
+    setTitle('<em>Sui 上每个 AI agent 都需要这个结算层。</em>');
+    setSub(
+        '策略控制钱包。Move 链上执行。Guardian 风险检查。全程可审计。<em>这就是 AI agent 经济的基础设施。</em>',
+        'Policy-controlled wallets. Move-enforced execution. Guardian risk checks. Fully auditable. <em>This is the infrastructure the AI agent economy needs.</em>'
     );
-    setCenter('✅', 'Sui-Nexus Guardian\nPolicy Enforced. Audit Complete.', 'ok');
-    eventLog('✓ Demo complete: 2 agents, 1 blocked, 1 compliant, 100% on-chain enforced');
+    setCenter('✅', 'Sui-Nexus Guardian<br>策略执行完毕 · 审计完成', 'ok');
+    eventLog('✓ 演示完成: 2 个 agent · 1 次拦截 · 1 次合规 · 100% 链上执行');
     setProgress(100);
-
-    await sleep(2000);
+    await sleep(3000);
     $('victory-overlay').classList.remove('hidden');
 }
 
 // ── Init ──
 $('start-btn').addEventListener('click', () => {
-    $('start-btn').textContent = 'Starting...';
+    $('start-btn').textContent = '启动中...';
     $('start-btn').disabled = true;
     runDemo().catch(err => {
-        eventLog('ERROR: ' + err.message);
-        $('start-btn').textContent = '▶ Start Demo';
+        eventLog('错误: ' + err.message);
+        $('start-btn').textContent = '▶ 开始演示 Start Demo';
         $('start-btn').disabled = false;
     });
 });
 
-// Health check on load
-(async function init() {
+// Health check
+(async function boot() {
     try {
         const h = await api('/health', null);
-        if (h.ready) eventLog('Gateway ready · demo mode · Sui Testnet');
-        else eventLog('Gateway starting...');
+        if (h.ready) setSub('网关就绪 — 点击 Start Demo 开始演示', 'Gateway ready — click Start Demo to begin');
+        else setSub('网关启动中...', 'Gateway starting...');
     } catch(_) {
-        eventLog('Waiting for gateway at ' + API + ' ...');
+        setSub('等待网关启动... 请运行 go run ./cmd/gateway/', 'Waiting for gateway... run: go run ./cmd/gateway/');
     }
 })();
 </script>
