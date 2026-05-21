@@ -40,171 +40,144 @@ Most projects build agents that trade. Sui-Nexus builds the infrastructure that 
 
 ### System Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           AI AGENT LAYER                                 │
-│                                                                          │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐       │
-│  │  Analyst Agent   │  │  Trader Agent    │  │  Custom Agents   │       │
-│  │  (Python, LLM)   │  │  (Python, LLM)   │  │  (Any Language)  │       │
-│  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘       │
-│           │ HMAC                │ HMAC                 │ HMAC            │
-└───────────┼─────────────────────┼──────────────────────┼────────────────┘
-            │                     │                      │
-┌───────────┼─────────────────────┼──────────────────────┼────────────────┐
-│           ▼                     ▼                      ▼                 │
-│  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │                     GO GATEWAY (Gin)                             │    │
-│  │                                                                  │    │
-│  │  ┌──────────┐  ┌──────────────┐  ┌──────────────┐              │    │
-│  │  │ HMAC Auth │  │ Rate Limiter │  │ CORS / Recover│             │    │
-│  │  └──────────┘  └──────────────┘  └──────────────┘              │    │
-│  │                                                                  │    │
-│  │  ┌──────────────────────────────────────────────────────────┐   │    │
-│  │  │                    API Endpoints                          │   │    │
-│  │  │                                                          │   │    │
-│  │  │  /api/v1/intent          → Agent trade submission        │   │    │
-│  │  │  /api/v1/task/:id        → Task status query             │   │    │
-│  │  │  /api/v1/auth/zklogin    → zkLogin OAuth flow            │   │    │
-│  │  │  /api/v1/wallet/create   → Agent wallet creation         │   │    │
-│  │  │  /api/v1/wallet/execute  → Policy-enforced execution     │   │    │
-│  │  │  /api/v1/wallet/:id/revoke → Owner revocation            │   │    │
-│  │  │  /api/v1/parse           → NLP intent parsing            │   │    │
-│  │  │  /ws                     → Real-time WebSocket           │   │    │
-│  │  └──────────────────────────────────────────────────────────┘   │    │
-│  │                                                                  │    │
-│  │  ┌──────────────────────────────────────────────────────────┐   │    │
-│  │  │               GUARDIAN RISK LAYER                          │   │    │
-│  │  │  Slippage check | Budget check | Protocol health check    │   │    │
-│  │  └──────────────────────────────────────────────────────────┘   │    │
-│  └───────────────┬─────────────────────────────────────────────────┘    │
-│                  │                                                      │
-│  ┌───────────────┼───────────────────────────────────────────────┐    │
-│  │               ▼                                                │    │
-│  │  ┌─────────────────────┐  ┌──────────────┐  ┌──────────────┐ │    │
-│  │  │    Kafka Queue      │  │  Redis Cache │  │  WebSocket   │ │    │
-│  │  │  (async processing) │  │  (task/wallet│  │  (live push) │ │    │
-│  │  └─────────┬───────────┘  └──────────────┘  └──────────────┘ │    │
-│  │            │                                                   │    │
-│  │            ▼                                                   │    │
-│  │  ┌─────────────────────────────────────────────────────────┐  │    │
-│  │  │                   PTB BUILDER                             │  │    │
-│  │  │                                                          │  │    │
-│  │  │  Swap (Cetus)  │  Transfer  │  AgentWallet  │  DeepBook  │  │    │
-│  │  └─────────────────────────────┬───────────────────────────┘  │    │
-│  │                                │                               │    │
-│  │                                ▼                               │    │
-│  │  ┌─────────────────────────────────────────────────────────┐  │    │
-│  │  │                  PTB EXECUTOR                             │  │    │
-│  │  │  Sui Go SDK → SignAndExecuteTransactionBlock              │  │    │
-│  │  └─────────────────────────────────────────────────────────┘  │    │
-│  └────────────────────────────────────────────────────────────────┘    │
-└────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                           SUI BLOCKCHAIN                                │
-│                                                                         │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│  │  agent_wallet    │  │  agent_memory    │  │  DeepBook / Cetus│      │
-│  │  (Move)          │  │  (Move)          │  │  (DEX)           │      │
-│  │                  │  │                  │  │                   │      │
-│  │  · budget caps   │  │  · Walrus blob ID│  │  · limit orders  │      │
-│  │  · protocol scope│  │  · task_id       │  │  · swap routes   │      │
-│  │  · time windows  │  │  · agent_address │  │                   │      │
-│  │  · activity log  │  │  · timestamp     │  │                   │      │
-│  │  · revocation    │  │                  │  │                   │      │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘      │
-│                                                                         │
-│  ┌──────────────────────────────────────────────────────────────┐      │
-│  │                        WALRUS                                 │      │
-│  │  Decentralized storage for AI agent context, logs, and memory │      │
-│  └──────────────────────────────────────────────────────────────┘      │
-└────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph AgentLayer[" AI AGENT LAYER "]
+        direction LR
+        Agent1["Analyst Agent\n(Python, LLM)"]
+        Agent2["Trader Agent\n(Python, LLM)"]
+        Agent3["Custom Agents\n(Any Language)"]
+    end
+
+    subgraph Gateway[" GO GATEWAY (Gin) "]
+        direction TB
+        subgraph MW[" Middleware "]
+            direction LR
+            HMAC["HMAC Auth"]
+            RL["Rate Limiter"]
+            CORS["CORS / Recovery"]
+        end
+        subgraph API[" API Endpoints "]
+            direction LR
+            Intent["/api/v1/intent\nTrade submission"]
+            Wallet["/api/v1/wallet/*\nPolicy-enforced ops"]
+            ZK["/api/v1/auth/zklogin\nzkLogin OAuth"]
+            WS["/ws\nReal-time dashboard"]
+        end
+        subgraph Guardian[" GUARDIAN RISK LAYER "]
+            direction LR
+            SL["Slippage <5%"]
+            BC["Budget Cap"]
+            PA["Protocol Allowlist"]
+        end
+        MW --> API --> Guardian
+    end
+
+    subgraph Infra[" INFRASTRUCTURE "]
+        direction LR
+        Kafka["Kafka Queue\n(async processing)"]
+        Redis["Redis Cache\n(task/wallet state)"]
+        WSHub["WebSocket Hub\n(live push)"]
+    end
+
+    subgraph PTB[" PTB BUILDER & EXECUTOR "]
+        direction LR
+        Swap["Swap (Cetus)"]
+        Transfer["Transfer"]
+        AgentW["AgentWallet"]
+        DB["DeepBook Orders"]
+    end
+
+    subgraph Sui[" SUI BLOCKCHAIN "]
+        direction TB
+        subgraph Move[" Move Contracts "]
+            direction LR
+            AW["agent_wallet\n· budget caps\n· protocol scope\n· time windows\n· revocation"]
+            AM["agent_memory\n· Walrus blob ID\n· task reference"]
+            DEX["DeepBook / Cetus\n· limit orders\n· swap routes"]
+        end
+        WalrusLayer["WALRUS\nDecentralized AI context, logs, and cross-agent memory"]
+        Move --> WalrusLayer
+    end
+
+    AgentLayer -- "HMAC" --> Gateway
+    Gateway --> Infra
+    Infra --> PTB
+    PTB --> Sui
 ```
 
 ### Agent Wallet Flow (zkLogin + Policy Enforcement)
 
-```
-Owner (Human)                    Gateway                      Sui Chain
-    │                                │                              │
-    │ POST /wallet/create            │                              │
-    │ { agent: "0x..", budget: 500 } │                              │
-    │ ──────────────────────────────►│                              │
-    │                                │ agent_wallet::create_wallet ─►
-    │                                │                          WalletCreated
-    │                                │                              │
-Agent (AI)                          │                              │
-    │                                │                              │
-    │ GET /auth/zklogin              │                              │
-    │ ──────────────────────────────►│                              │
-    │                            OAuth → Google → JWT              │
-    │ ◄── salt + jwt + ephemeral ───│                              │
-    │                                │                              │
-    │ @mysten/zklogin generates:     │                              │
-    │   Poseidon → address_seed     │                              │
-    │   Blake2b → sui_address       │                              │
-    │   Groth16 → zk_proof          │                              │
-    │                                │                              │
-    │ POST /auth/zklogin/submit-proof│                             │
-    │ ──────────────────────────────►│                              │
-    │ ◄── session verified ─────────│                              │
-    │                                │                              │
-    │ POST /wallet/execute           │                              │
-    │ { amount: 100, protocol: DB }  │                              │
-    │ ──────────────────────────────►│                              │
-    │                                │ GUARDIAN checks:             │
-    │                                │   ✓ slippage < 5%           │
-    │                                │   ✓ budget remaining        │
-    │                                │   ✓ protocol allowed        │
-    │                                │                              │
-    │                                │ agent_wallet::execute_trade ─►
-    │                                │   ✓ is_active? ✓            │
-    │                                │   ✓ time window? ✓          │
-    │                                │   ✓ agent_addr match? ✓     │
-    │                                │   ✓ budget cap? ✓           │
-    │                                │                          TradeExecuted
-    │                                │                         Activity logged
-    │                                │                              │
-    │                                │ (optional) DeepBook order ──►
-    │ ◄── tx_digest ────────────────│                              │
+```mermaid
+sequenceDiagram
+    participant Owner as Owner (Human)
+    participant Agent as Agent (AI)
+    participant GW as Gateway
+    participant Google as Google OAuth
+    participant Sui as Sui Chain
+
+    Note over Owner,Sui: Phase 1 — Wallet Creation
+    Owner->>GW: POST /wallet/create {agent, budget, protocols, window}
+    GW->>Sui: agent_wallet::create_wallet
+    Sui-->>GW: WalletCreated event
+    GW-->>Owner: wallet_id + on-chain tx digest
+
+    Note over Owner,Sui: Phase 2 — Agent Authentication (zkLogin)
+    Agent->>GW: GET /auth/zklogin
+    GW->>Google: OAuth redirect
+    Google-->>Agent: JWT
+    GW-->>Agent: salt + jwt_randomness + ephemeral_pubkey
+    Agent->>Agent: Poseidon → address_seed\nBlake2b → sui_address\nGroth16 → zk_proof
+    Agent->>GW: POST /auth/zklogin/submit-proof
+    GW-->>Agent: session token (verified)
+
+    Note over Owner,Sui: Phase 3 — Policy-Enforced Execution
+    Agent->>GW: POST /wallet/execute {amount, protocol}
+    GW->>GW: GUARDIAN checks:\n✓ slippage < 5%\n✓ budget remaining\n✓ protocol in allowlist
+    GW->>Sui: agent_wallet::execute_trade
+    Sui->>Sui: ✓ is_active? ✓ time_window?\n✓ agent_addr match? ✓ budget cap?
+    Sui-->>GW: TradeExecuted + Activity logged
+    opt DeepBook order
+        GW->>Sui: place_limit_order (DeepBook V3)
+    end
+    GW-->>Agent: tx_digest
+
+    Note over Owner,Sui: Phase 4 — Revocation
+    Owner->>GW: POST /wallet/:id/revoke
+    GW->>Sui: agent_wallet::revoke_wallet
+    Sui-->>GW: WalletRevoked (permanent)
 ```
 
 ### Walrus Memory Flow (Cross-Agent Context)
 
-```
-Analyst Agent              Gateway              Walrus            Sui Chain
-    │                         │                    │                    │
-    │ 1. LLM analysis         │                    │                    │
-    │    → report JSON        │                    │                    │
-    │                         │                    │                    │
-    │ 2. POST /intent         │                    │                    │
-    │    context_payload ────►│                    │                    │
-    │                         │ 3. Write to Walrus┌┘                   │
-    │                         │   ───────────────►│                    │
-    │                         │   ◄── blob_id ────│                   │
-    │                         │                    │                    │
-    │                         │ 4. PTB → MoveCall  │                    │
-    │                         │   agent_memory::   │                    │
-    │                         │   create_memory    │                    │
-    │                         │   ───────────────────────────────────►│
-    │                         │                                    MemoryObject
-    │                         │                                    { blob_id, task_id }
-    │                         │                    │                    │
-Trader Agent                 │                    │                    │
-    │                         │                    │                    │
-    │ 5. GET /task/:id        │                    │                    │
-    │    ◄── blob_id ────────│                    │                    │
-    │                         │                    │                    │
-    │ 6. Read Walrus blob     │                    │                    │
-    │    ───────────────────────────────────────►│                    │
-    │    ◄── analysis JSON ──────────────────────│                    │
-    │                         │                    │                    │
-    │ 7. Execute with context │                    │                    │
-    │    "analyst says BUY"   │                    │                    │
-    │    POST /intent ───────►│                    │                    │
-    │                         │                    │                    │
-    │    Shared memory → coordinated action       │                    │
+```mermaid
+sequenceDiagram
+    participant Analyst as Analyst Agent
+    participant GW as Gateway
+    participant Walrus as Walrus
+    participant Sui as Sui Chain
+    participant Trader as Trader Agent
+
+    Note over Analyst,Trader: Phase 1 — Analyst writes context
+    Analyst->>Analyst: LLM analysis → report JSON
+    Analyst->>GW: POST /intent {context_payload}
+    GW->>Walrus: Store blob (analysis data)
+    Walrus-->>GW: blob_id
+    GW->>Sui: PTB → agent_memory::create_memory
+    Sui-->>GW: MemoryObject {blob_id, task_id}
+
+    Note over Analyst,Trader: Phase 2 — Trader reads shared memory
+    Trader->>GW: GET /task/:id
+    GW-->>Trader: blob_id + metadata
+    Trader->>Walrus: Read blob
+    Walrus-->>Trader: analysis JSON ("sentiment: bearish, action: sell")
+
+    Note over Analyst,Trader: Phase 3 — Coordinated action
+    Trader->>GW: POST /intent (informed by analyst context)
+    GW->>Sui: Execute trade PTB
+    Sui-->>GW: tx_digest
+
+    Note over Analyst,Trader: Analyst + Trader share memory via Walrus → coordinated decision
 ```
 
 ---

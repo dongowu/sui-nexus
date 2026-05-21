@@ -18,15 +18,9 @@
 
 - [ ] **GitHub 仓库** 公开可见
 - [ ] **README.md** 含架构图、赛道说明、Quick Start
-- [ ] **Demo 视频** (建议 3 分钟以内)
-  - Agent Wallet Demo: `scripts/demo/agent_wallet_demo.py`
-  - Walrus Memory Demo: `scripts/demo/walrus_memory_demo.py`
-- [ ] **DoraHacks 项目页面** 填写完整
-  - 项目描述 (英文)
-  - 赛道选择
-  - 仓库链接
-  - Demo 视频链接
-  - Sui 合约地址
+- [ ] **Demo 视频** (建议 3 分钟以内) — 参考 [DEMO_VIDEO_GUIDE.md](DEMO_VIDEO_GUIDE.md)
+- [ ] **DoraHacks 项目页面** 填写完整 — 参考 [DORAHACKS_SUBMISSION.md](DORAHACKS_SUBMISSION.md)
+- [ ] **测试通过**: `go test ./...`
 
 ## 演示前的环境准备
 

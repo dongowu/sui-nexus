@@ -254,10 +254,9 @@ func TestDashboardRouteServesJudgeConsoleWithNarrative(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "Sui-Nexus Judge Console")
-	assert.Contains(t, w.Body.String(), "Autonomous agents need programmable settlement")
-	assert.Contains(t, w.Body.String(), "Safe trade passes Guardian")
-	assert.Contains(t, w.Body.String(), "Overspend is blocked before funds move")
+	assert.Contains(t, w.Body.String(), "Sui Overflow 2026")
+	assert.Contains(t, w.Body.String(), "AGENTIC WEB")
+	assert.Contains(t, w.Body.String(), "WALRUS")
 	assert.Contains(t, w.Body.String(), `class="notranslate"`)
 }
 
