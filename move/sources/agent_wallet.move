@@ -25,10 +25,6 @@ module sui_nexus::agent_wallet {
     const ENotOwner: u64 = 8;
     const EGuardianRejected: u64 = 9;
 
-    /// Maximum slippage in basis points (default 500 = 5%)
-    #[allow(unused_const)]
-    const MAX_SLIPPAGE_BPS: u64 = 500;
-
     // ═══════════════════════════════════════════════
     // Structs
     // ═══════════════════════════════════════════════
@@ -184,7 +180,7 @@ module sui_nexus::agent_wallet {
     /// 4. Protocol is in the allowlist (if non-empty)
     /// 5. Amount does not exceed remaining budget
     /// 6. Wallet has sufficient balance
-    /// 7. Slippage does not exceed MAX_SLIPPAGE_BPS (Guardian check)
+    /// 7. Additional risk checks are handled by the gateway Guardian before submission
     ///
     /// Production note: In a full zkLogin production deployment, agent_addr would
     /// be enforced via tx_context::sender() when the agent signs the transaction

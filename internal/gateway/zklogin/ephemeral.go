@@ -118,43 +118,6 @@ func (m *EphemeralKeyManager) SubmitProof(sessionToken, userAddress, addressSeed
 	return nil
 }
 
-// GetKey retrieves an ephemeral key by session token if valid.
-func (m *EphemeralKeyManager) GetKey(sessionToken string) (*EphemeralKey, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	key, exists := m.keys[sessionToken]
-	if !exists {
-		return nil, fmt.Errorf("session not found")
-	}
-
-	if time.Now().After(expirationTime(key, m.maxEpoch)) {
-		return nil, fmt.Errorf("session expired")
-	}
-
-	return key, nil
-}
-
-// RemoveKey removes a session.
-func (m *EphemeralKeyManager) RemoveKey(sessionToken string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.keys, sessionToken)
-}
-
-// CleanupExpired removes all expired sessions.
-func (m *EphemeralKeyManager) CleanupExpired() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	now := time.Now()
-	for token, key := range m.keys {
-		if now.After(expirationTime(key, m.maxEpoch)) {
-			delete(m.keys, token)
-		}
-	}
-}
-
 // IsValid checks if a session token is valid and the proof has been submitted.
 func (m *EphemeralKeyManager) IsValid(userAddress, sessionToken string) bool {
 	m.mu.RLock()
