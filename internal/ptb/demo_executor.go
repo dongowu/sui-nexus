@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
+	"github.com/block-vision/sui-go-sdk/models"
 )
 
 // NewDemoExecutor returns an executor that never touches Sui RPC. It is used by
@@ -21,13 +23,23 @@ func (e *Executor) isDemoMode() bool {
 }
 
 func (e *Executor) executeDemoPTB(_ context.Context, ptb *PTB) (string, error) {
+	resp, err := e.executeDemoPTBDetailed(context.Background(), ptb)
+	if err != nil {
+		return "", err
+	}
+	return resp.Digest, nil
+}
+
+func (e *Executor) executeDemoPTBDetailed(_ context.Context, ptb *PTB) (*models.SuiTransactionBlockResponse, error) {
 	if ptb == nil {
-		return "", fmt.Errorf("ptb is required")
+		return nil, fmt.Errorf("ptb is required")
 	}
 	payload, err := json.Marshal(ptb)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal demo PTB: %w", err)
+		return nil, fmt.Errorf("failed to marshal demo PTB: %w", err)
 	}
 	sum := sha256.Sum256(payload)
-	return "demo-" + hex.EncodeToString(sum[:])[:44], nil
+	return &models.SuiTransactionBlockResponse{
+		Digest: "demo-" + hex.EncodeToString(sum[:])[:44],
+	}, nil
 }

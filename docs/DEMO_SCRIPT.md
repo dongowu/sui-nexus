@@ -30,10 +30,10 @@ Then open `web/dashboard.html`. The console demonstrates wallet creation, Guardi
 >
 > 1. **HMAC Authentication** - Agents sign intents with API keys, no private key exposure
 > 2. **Kafka Queue** - Asynchronous processing for high throughput
-> 3. **PTB (Programmable Transaction Blocks)** - Atomic multi-party settlements
+> 3. **Move Policy Wallets** - Owner-scoped wallets with on-chain budget, protocol, and time controls
 > 4. **Walrus Storage** - Decentralized AI context/logs
 >
-> The key innovation: agents submit **intents**, not transactions. The gateway builds atomic PTBs that execute swaps, distribute rewards, and store AI context—all in one transaction."
+> The key innovation: agents submit **intents**, not transactions. The gateway validates requests, persists AI context, and executes Sui transactions with on-chain policy enforcement."
 
 **Visual:** Architecture diagram with data flow
 
@@ -61,33 +61,14 @@ curl http://localhost:8080/health
 }
 ```
 
-#### Step 2: Analyst Agent Analyzes News (30s)
+#### Step 2: Analyst Agent Writes Shared Context (30s)
 ```bash
-python3 scripts/demo/analyst_agent.py
+python3 scripts/demo/walrus_memory_demo.py
 ```
 
-**Input:** `Protocol X suffered a flash loan attack, token price dropped 40%`
+**Script:** "The analyst agent writes context to Walrus, the gateway mints a MemoryObject on-chain, and the trader agent reuses that context."
 
-**Output:**
-```json
-{
-  "sentiment": "bearish",
-  "confidence": 0.85,
-  "action": "sell",
-  "reason": "Negative news detected: Protocol X suffered..."
-}
-```
-
-**Script:** "The analyst agent detects bearish sentiment and submits a sell intent to the gateway."
-
-#### Step 3: Trader Agent Executes (20s)
-```bash
-python3 scripts/demo/trader_agent.py
-```
-
-**Script:** "The trader agent receives the analysis and executes the trade through our gateway."
-
-#### Step 4: Show Sui Transaction (30s)
+#### Step 3: Show Task State And Memory Receipt (20s)
 ```bash
 # Query task status
 curl http://localhost:8080/api/v1/task/{task_id}
@@ -99,15 +80,13 @@ curl http://localhost:8080/api/v1/task/{task_id}
   "task_id": "abc-123",
   "status": "completed",
   "tx_digest": "8xK9mN...",
+  "memory_tx_digest": "7Yp2...",
   "blob_id": "walrus://..."
 }
 ```
 
 **Script:**
-> "Here's the magic: **One atomic transaction** on Sui that:
-> - Executed the swap
-> - Distributed rewards to both agents (10% analyst, 20% trader)
-> - Stored the AI analysis context on Walrus
+> "Here's the magic: the gateway stored AI context in Walrus and minted a verifiable on-chain `MemoryObject` that any agent can reference later.
 >
 > Let's verify on Sui Explorer..."
 
@@ -125,6 +104,7 @@ curl http://localhost:8080/api/v1/task/{task_id}
   ```bash
   export SUI_SIGNER_PRIVATE_KEY="suiprivkey..."
   export SUI_GAS_OBJECT_ID="0x..."
+  export SUI_FUNDING_OBJECT_ID="0x..."
   export KAFKA_BROKERS="localhost:9092"
   export REDIS_ADDR="localhost:6379"
   ```
@@ -143,7 +123,7 @@ curl http://localhost:8080/api/v1/task/{task_id}
 
 ### Technical Innovation:
 1. **HMAC-based auth** - No private key custody needed
-2. **PTB atomic execution** - Multi-step operations in one transaction
+2. **Policy-enforced execution** - wallets are created, funded, executed, and revoked with on-chain checks
 3. **Walrus integration** - Decentralized AI context storage
 4. **Production-ready** - Kafka queue, Redis cache, graceful degradation
 
@@ -184,7 +164,7 @@ A: HMAC auth is simpler and doesn't require on-chain state. Agents can start imm
 
 - ✅ **Sub-second latency** from intent to Sui transaction
 - ✅ **Zero private key exposure** for AI agents
-- ✅ **Atomic execution** - all-or-nothing guarantees
+- ✅ **On-chain guardrails** - owner-scoped wallets and policy backstops
 - ✅ **Production-ready** - comprehensive error handling and monitoring
 - ✅ **Sui-native** - leverages PTB and Walrus
 

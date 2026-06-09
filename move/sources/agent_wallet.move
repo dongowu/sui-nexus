@@ -8,7 +8,8 @@ module sui_nexus::agent_wallet {
     use sui::event;
     use sui::coin::{Self, Coin};
     use sui::balance::{Self, Balance};
-    use std::string::String;
+    use sui::sui::SUI;
+    use std::string::{String, utf8};
     use std::vector;
 
     // ═══════════════════════════════════════════════
@@ -25,6 +26,7 @@ module sui_nexus::agent_wallet {
     const EGuardianRejected: u64 = 9;
 
     /// Maximum slippage in basis points (default 500 = 5%)
+    #[allow(unused_const)]
     const MAX_SLIPPAGE_BPS: u64 = 500;
 
     // ═══════════════════════════════════════════════
@@ -36,7 +38,7 @@ module sui_nexus::agent_wallet {
         timestamp: u64,
         action: String,
         amount_mist: u64,
-        protocol: String,
+        protocol: address,
         description: String,
     }
 
@@ -50,7 +52,7 @@ module sui_nexus::agent_wallet {
         budget_spent_mist: u64,
         time_start: u64, // epoch when wallet becomes active
         time_end: u64,   // epoch when wallet expires
-        allowed_protocols: vector<String>, // empty = all protocols allowed
+        allowed_protocols: vector<address>, // empty = all protocols allowed
         is_active: bool,
         activity_log: vector<ActivityEntry>,
         balance: Balance<SUI>,
@@ -74,7 +76,7 @@ module sui_nexus::agent_wallet {
         agent: address,
         action: String,
         amount_mist: u64,
-        protocol: String,
+        protocol: address,
         budget_remaining: u64,
     }
 
@@ -97,27 +99,25 @@ module sui_nexus::agent_wallet {
     /// Create a new AgentWallet with the given policy parameters.
     /// - `agent_address`: the zkLogin-derived address of the authorized agent
     /// - `budget_cap_mist`: maximum total spend in MIST
-    /// - `allowed_protocols`: protocol package IDs the agent can interact with
     /// - `time_end`: epoch when the wallet expires
     /// The wallet starts active from the current epoch.
     public fun create_wallet(
+        owner_address: address,
         agent_address: address,
         budget_cap_mist: u64,
-        allowed_protocols: vector<String>,
         time_end: u64,
         ctx: &mut TxContext,
     ) {
-        let owner = tx_context::sender(ctx);
         let time_start = tx_context::epoch(ctx);
         let wallet = AgentWallet {
             id: object::new(ctx),
-            owner,
+            owner: owner_address,
             agent_address,
             budget_cap_mist,
             budget_spent_mist: 0,
             time_start,
             time_end,
-            allowed_protocols,
+            allowed_protocols: vector::empty(),
             is_active: true,
             activity_log: vector::empty(),
             balance: balance::zero(),
@@ -125,7 +125,7 @@ module sui_nexus::agent_wallet {
 
         event::emit(WalletCreated {
             wallet_id: object::uid_to_address(&wallet.id),
-            owner,
+            owner: owner_address,
             agent_address,
             budget_cap_mist,
             time_start,
@@ -137,8 +137,9 @@ module sui_nexus::agent_wallet {
     }
 
     /// Owner deposits SUI into the wallet.
-    public fun deposit(wallet: &mut AgentWallet, coin: Coin<SUI>, _ctx: &TxContext) {
+    public fun deposit(wallet: &mut AgentWallet, owner_address: address, coin: Coin<SUI>, _ctx: &TxContext) {
         assert!(wallet.is_active, EWalletRevoked);
+        assert!(owner_address == wallet.owner, ENotOwner);
         let amount = coin::value(&coin);
         balance::join(&mut wallet.balance, coin::into_balance(coin));
 
@@ -150,8 +151,8 @@ module sui_nexus::agent_wallet {
     }
 
     /// Owner revokes the wallet, permanently freezing all agent activity.
-    public fun revoke(wallet: &mut AgentWallet, ctx: &TxContext) {
-        assert!(tx_context::sender(ctx) == wallet.owner, ENotOwner);
+    public fun revoke(wallet: &mut AgentWallet, owner_address: address, _ctx: &TxContext) {
+        assert!(owner_address == wallet.owner, ENotOwner);
         wallet.is_active = false;
 
         event::emit(WalletRevoked {
@@ -194,7 +195,7 @@ module sui_nexus::agent_wallet {
         wallet: &mut AgentWallet,
         agent_addr: address,
         amount_mist: u64,
-        protocol: String,
+        protocol: address,
         expected_price: u64,
         description: String,
         ctx: &mut TxContext,
@@ -214,8 +215,8 @@ module sui_nexus::agent_wallet {
 
         // 3. Protocol allowlist check
         if (!vector::is_empty(&wallet.allowed_protocols)) {
-            let found = false;
-            let i = 0;
+            let mut found = false;
+            let mut i = 0;
             let len = vector::length(&wallet.allowed_protocols);
             while (i < len) {
                 let allowed = vector::borrow(&wallet.allowed_protocols, i);
@@ -248,7 +249,7 @@ module sui_nexus::agent_wallet {
         // Log activity
         vector::push_back(&mut wallet.activity_log, ActivityEntry {
             timestamp: epoch,
-            action: string::utf8(b"trade"),
+            action: utf8(b"trade"),
             amount_mist,
             protocol,
             description,
@@ -258,7 +259,7 @@ module sui_nexus::agent_wallet {
         event::emit(TradeExecuted {
             wallet_id: object::uid_to_address(&wallet.id),
             agent: agent_addr,
-            action: string::utf8(b"trade"),
+            action: utf8(b"trade"),
             amount_mist,
             protocol,
             budget_remaining: wallet.budget_cap_mist - wallet.budget_spent_mist,

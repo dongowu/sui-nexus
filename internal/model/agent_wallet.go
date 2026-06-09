@@ -43,6 +43,10 @@ type CreateWalletRequest struct {
 	BudgetCapMist    uint64   `json:"budget_cap_mist" binding:"required"`
 	AllowedProtocols []string `json:"allowed_protocols"`
 	TimeEndEpoch     uint64   `json:"time_end_epoch"` // must be > current epoch
+
+	// Owner identity (trusted-gateway model: gateway verifies and forwards owner)
+	SessionToken string `json:"session_token,omitempty"`
+	UserAddress  string `json:"user_address,omitempty"`
 }
 
 // AgentExecuteRequest is an agent's request to execute a trade within policy.
@@ -51,6 +55,7 @@ type AgentExecuteRequest struct {
 	AmountMist    uint64 `json:"amount_mist" binding:"required"`
 	Protocol      string `json:"protocol" binding:"required"`
 	ExpectedPrice uint64 `json:"expected_price"` // Guardian: expected price in MIST (0 = skip check)
+	ObservedPrice uint64 `json:"observed_price"` // Guardian: observed quote/market price in MIST
 	Description   string `json:"description"`
 
 	// zkLogin session

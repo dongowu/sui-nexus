@@ -4,7 +4,8 @@
 
 ## Pre-Recording Checklist
 
-- [ ] Gateway running: `HACKATHON_DEMO_MODE=true go run ./cmd/gateway/main.go`
+- [ ] Judge demo mode: `HACKATHON_DEMO_MODE=true ./scripts/demo/run_agent_wallet_demo.sh`
+- [ ] Live smoke mode: `bash scripts/demo/live_testnet_smoke.sh`
 - [ ] Dashboard open: `open web/dashboard.html`
 - [ ] Sui Explorer tab open for on-chain verification
 
@@ -27,13 +28,13 @@
 ### Part 3: Live Demo — Agent Wallet (90 seconds)
 
 **Step 1: Start the Demo** (10 seconds)
-- Click "Start Demo" on dashboard
+- Run judge demo mode for local deterministic receipts, or run the live smoke script for real testnet receipts
 
-**Step 2: Two Wallets Created** (20 seconds)
-- Agent Alpha (500 MIST) and Agent Bravo (100 MIST)
+**Step 2: Wallet Created And Funded** (20 seconds)
+- Owner session creates and funds the agent wallet
 
 **Step 3: Safe Trade Passes Guardian** (30 seconds)
-- Agent Alpha submits 100 MIST → Guardian passes → Trade executed
+- Agent submits 100 MIST with `expected_price` + `observed_price` → Guardian passes → trade executed
 
 **Step 4: Overspend Blocked** (30 seconds) ⭐
 - Agent Bravo attempts 600 MIST → Guardian intercepts
@@ -52,7 +53,7 @@ Run: `python3 scripts/demo/walrus_memory_demo.py`
 
 ### Part 5: Chain Verification (30 seconds)
 
-**Show**: Explorer with contract address `0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d`
+**Show**: Explorer with contract address `0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433`
 
 ---
 
@@ -62,6 +63,7 @@ Run: `python3 scripts/demo/walrus_memory_demo.py`
 - ✅ "Overspend blocked" moment (key differentiator)
 - ✅ Explorer chain verification
 - ✅ Both tracks demonstrated
+- ✅ `wallet_id` returned from create response
 
 ### What to AVOID
 - ❌ Errors in terminal

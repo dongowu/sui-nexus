@@ -120,33 +120,42 @@ func newSuiSignerAccount(cfg SDKExecutorConfig) (suiSignerAccount, error) {
 }
 
 func (e *Executor) ExecutePTB(ctx context.Context, ptb *PTB) (string, error) {
+	resp, err := e.ExecutePTBDetailed(ctx, ptb)
+	if err != nil {
+		return "", err
+	}
+	return resp.Digest, nil
+}
+
+func (e *Executor) ExecutePTBDetailed(ctx context.Context, ptb *PTB) (*models.SuiTransactionBlockResponse, error) {
 	if ptb == nil {
-		return "", fmt.Errorf("ptb is required")
+		return nil, fmt.Errorf("ptb is required")
 	}
 	if e.isDemoMode() {
-		return e.executeDemoPTB(ctx, ptb)
+		return e.executeDemoPTBDetailed(ctx, ptb)
 	}
 	if ptb.Transfer != nil {
-		return e.executeTransferSui(ctx, ptb)
+		return e.executeTransferSuiDetailed(ctx, ptb)
 	}
 	if ptb.MoveCall != nil {
-		return e.executeMoveCall(ctx, ptb)
+		return e.executeMoveCallDetailed(ctx, ptb)
 	}
 	if strings.TrimSpace(ptb.TransactionBytes) == "" {
-		return "", fmt.Errorf("signed transaction bytes are required for Sui RPC execution")
+		return nil, fmt.Errorf("signed transaction bytes are required for Sui RPC execution")
 	}
 	if len(ptb.Signatures) == 0 {
-		return "", fmt.Errorf("signed transaction signatures are required for Sui RPC execution")
+		return nil, fmt.Errorf("signed transaction signatures are required for Sui RPC execution")
 	}
 	for i, sig := range ptb.Signatures {
 		if strings.TrimSpace(sig) == "" {
-			return "", fmt.Errorf("signature %d is empty", i)
+			return nil, fmt.Errorf("signature %d is empty", i)
 		}
 	}
 
 	options := map[string]interface{}{
-		"showEffects": true,
-		"showEvents":  true,
+		"showEffects":       true,
+		"showEvents":        true,
+		"showObjectChanges": true,
 	}
 	params := []interface{}{
 		ptb.TransactionBytes,
@@ -162,67 +171,66 @@ func (e *Executor) ExecutePTB(ctx context.Context, ptb *PTB) (string, error) {
 		Params:  params,
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", e.rpcURL, bytes.NewReader(reqBody))
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := e.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to execute PTB: %w", err)
+		return nil, fmt.Errorf("failed to execute PTB: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("PTB execution failed: status %d, body: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("PTB execution failed: status %d, body: %s", resp.StatusCode, string(body))
 	}
 
 	var rpcResp RPCResponse
 	if err := json.NewDecoder(resp.Body).Decode(&rpcResp); err != nil {
-		return "", fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if rpcResp.Error != nil {
-		return "", fmt.Errorf("PTB RPC error: %s", rpcResp.Error.Message)
+		return nil, fmt.Errorf("PTB RPC error: %s", rpcResp.Error.Message)
 	}
 
-	// Extract digest from result
-	var result struct {
-		Digest string `json:"digest"`
-	}
+	var result models.SuiTransactionBlockResponse
 	if err := json.Unmarshal(rpcResp.Result, &result); err != nil {
-		return "", fmt.Errorf("failed to parse result: %w", err)
+		return nil, fmt.Errorf("failed to parse result: %w", err)
 	}
-
-	return result.Digest, nil
+	if strings.TrimSpace(result.Digest) == "" {
+		return nil, fmt.Errorf("ptb execution returned empty digest")
+	}
+	return &result, nil
 }
 
-func (e *Executor) executeMoveCall(ctx context.Context, ptb *PTB) (string, error) {
+func (e *Executor) executeMoveCallDetailed(ctx context.Context, ptb *PTB) (*models.SuiTransactionBlockResponse, error) {
 	if e.suiClient == nil || e.suiAccount == nil || strings.TrimSpace(e.suiGasObjectID) == "" {
-		return "", fmt.Errorf("sui sdk executor is not configured")
+		return nil, fmt.Errorf("sui sdk executor is not configured")
 	}
 	if ptb.MoveCall == nil {
-		return "", fmt.Errorf("move call plan is required")
+		return nil, fmt.Errorf("move call plan is required")
 	}
 	if strings.TrimSpace(ptb.MoveCall.PackageObjectID) == "" {
-		return "", fmt.Errorf("move package object id is required")
+		return nil, fmt.Errorf("move package object id is required")
 	}
 	if strings.TrimSpace(ptb.MoveCall.Module) == "" {
-		return "", fmt.Errorf("move module is required")
+		return nil, fmt.Errorf("move module is required")
 	}
 	if strings.TrimSpace(ptb.MoveCall.Function) == "" {
-		return "", fmt.Errorf("move function is required")
+		return nil, fmt.Errorf("move function is required")
 	}
 	if len(ptb.MoveCall.Arguments) == 0 {
-		return "", fmt.Errorf("move arguments are required")
+		return nil, fmt.Errorf("move arguments are required")
 	}
 	if ptb.GasBudget == 0 {
-		return "", fmt.Errorf("gas budget must be greater than zero")
+		return nil, fmt.Errorf("gas budget must be greater than zero")
 	}
 
 	txn, err := e.suiClient.MoveCall(ctx, models.MoveCallRequest{
@@ -236,26 +244,26 @@ func (e *Executor) executeMoveCall(ctx context.Context, ptb *PTB) (string, error
 		GasBudget:       strconv.FormatUint(ptb.GasBudget, 10),
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to build Sui move call transaction: %w", err)
+		return nil, fmt.Errorf("failed to build Sui move call transaction: %w", err)
 	}
 	return e.signAndExecute(ctx, txn, "Sui move call")
 }
 
-func (e *Executor) executeTransferSui(ctx context.Context, ptb *PTB) (string, error) {
+func (e *Executor) executeTransferSuiDetailed(ctx context.Context, ptb *PTB) (*models.SuiTransactionBlockResponse, error) {
 	if e.suiClient == nil || e.suiAccount == nil || strings.TrimSpace(e.suiGasObjectID) == "" {
-		return "", fmt.Errorf("sui sdk executor is not configured")
+		return nil, fmt.Errorf("sui sdk executor is not configured")
 	}
 	if ptb.Transfer == nil {
-		return "", fmt.Errorf("transfer plan is required")
+		return nil, fmt.Errorf("transfer plan is required")
 	}
 	if strings.TrimSpace(ptb.Transfer.Recipient) == "" {
-		return "", fmt.Errorf("transfer recipient is required")
+		return nil, fmt.Errorf("transfer recipient is required")
 	}
 	if ptb.Transfer.AmountMist == 0 {
-		return "", fmt.Errorf("transfer amount must be greater than zero")
+		return nil, fmt.Errorf("transfer amount must be greater than zero")
 	}
 	if ptb.GasBudget == 0 {
-		return "", fmt.Errorf("gas budget must be greater than zero")
+		return nil, fmt.Errorf("gas budget must be greater than zero")
 	}
 
 	txn, err := e.suiClient.TransferSui(ctx, models.TransferSuiRequest{
@@ -266,30 +274,31 @@ func (e *Executor) executeTransferSui(ctx context.Context, ptb *PTB) (string, er
 		Amount:      strconv.FormatUint(ptb.Transfer.AmountMist, 10),
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to build Sui transfer transaction: %w", err)
+		return nil, fmt.Errorf("failed to build Sui transfer transaction: %w", err)
 	}
 	return e.signAndExecute(ctx, txn, "Sui transfer")
 }
 
-func (e *Executor) signAndExecute(ctx context.Context, txn models.TxnMetaData, label string) (string, error) {
+func (e *Executor) signAndExecute(ctx context.Context, txn models.TxnMetaData, label string) (*models.SuiTransactionBlockResponse, error) {
 	resp, err := e.suiClient.SignAndExecuteTransactionBlock(ctx, models.SignAndExecuteTransactionBlockRequest{
 		TxnMetaData: txn,
 		PriKey:      e.suiAccount.PriKey,
 		Options: models.SuiTransactionBlockOptions{
-			ShowInput:    true,
-			ShowRawInput: true,
-			ShowEffects:  true,
-			ShowEvents:   true,
+			ShowInput:         true,
+			ShowRawInput:      true,
+			ShowEffects:       true,
+			ShowEvents:        true,
+			ShowObjectChanges: true,
 		},
 		RequestType: "WaitForLocalExecution",
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to sign and execute %s transaction: %w", label, err)
+		return nil, fmt.Errorf("failed to sign and execute %s transaction: %w", label, err)
 	}
 	if strings.TrimSpace(resp.Digest) == "" {
-		return "", fmt.Errorf("%s execution returned empty digest", label)
+		return nil, fmt.Errorf("%s execution returned empty digest", label)
 	}
-	return resp.Digest, nil
+	return &resp, nil
 }
 
 func (e *Executor) GetTransaction(ctx context.Context, digest string) (*TransactionResult, error) {

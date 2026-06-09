@@ -27,7 +27,7 @@ info_msg() { echo -e "${YELLOW}→ $1${RESET}"; }
 # Step 0: Health check
 # ────────────────────────────────────────────
 header "Step 0: Health Check"
-if ! curl -sf "$GATEWAY_URL/api/v1/health" > /dev/null 2>&1; then
+if ! curl -sf "$GATEWAY_URL/health" > /dev/null 2>&1; then
     fail_msg "Gateway is not running at $GATEWAY_URL"
     echo "  Start it with: go run ./cmd/gateway/"
     exit 1
@@ -46,7 +46,9 @@ RESP_A=$(curl -sf -X POST "$GATEWAY_URL/api/v1/wallet/create" \
     "agent_address": "0xAlice",
     "budget_cap_mist": 500,
     "allowed_protocols": ["DeepBook"],
-    "time_end_epoch": 999999
+    "time_end_epoch": 999999,
+    "user_address": "0xAlice",
+    "session_token": "'"$DEMO_TOKEN"'"
   }')
 WALLET_A=$(echo "$RESP_A" | jq -r '.wallet_id')
 pass_msg "Wallet A created: $WALLET_A (budget 500 MIST)"
@@ -58,7 +60,9 @@ RESP_B=$(curl -sf -X POST "$GATEWAY_URL/api/v1/wallet/create" \
     "agent_address": "0xBob",
     "budget_cap_mist": 100,
     "allowed_protocols": ["DeepBook"],
-    "time_end_epoch": 999999
+    "time_end_epoch": 999999,
+    "user_address": "0xBob",
+    "session_token": "'"$DEMO_TOKEN"'"
   }')
 WALLET_B=$(echo "$RESP_B" | jq -r '.wallet_id')
 pass_msg "Wallet B created: $WALLET_B (budget 100 MIST)"
@@ -76,6 +80,7 @@ RESP_A1=$(curl -sf -X POST "$GATEWAY_URL/api/v1/wallet/execute" \
     \"amount_mist\": 100,
     \"protocol\": \"DeepBook\",
     \"expected_price\": 1000,
+    \"observed_price\": 1000,
     \"description\": \"Alice swap SUI to USDC\",
     \"session_token\": \"$DEMO_TOKEN\",
     \"user_address\": \"0xAlice\"
@@ -105,6 +110,7 @@ RESP_B1=$(curl -sf -X POST "$GATEWAY_URL/api/v1/wallet/execute" \
     \"amount_mist\": 600,
     \"protocol\": \"DeepBook\",
     \"expected_price\": 1000,
+    \"observed_price\": 1000,
     \"description\": \"Bob tries to drain the wallet\",
     \"session_token\": \"$DEMO_TOKEN\",
     \"user_address\": \"0xBob\"
@@ -145,6 +151,7 @@ RESP_B2=$(curl -sf -X POST "$GATEWAY_URL/api/v1/wallet/execute" \
     \"amount_mist\": 50,
     \"protocol\": \"DeepBook\",
     \"expected_price\": 1000,
+    \"observed_price\": 1000,
     \"description\": \"Bob adjusted to comply with policy\",
     \"session_token\": \"$DEMO_TOKEN\",
     \"user_address\": \"0xBob\"
@@ -177,4 +184,4 @@ echo ""
 echo -e "  ${BOLD}Sui-Nexus${RESET}: Every AI agent on Sui needs this settlement layer."
 echo ""
 echo -e "  ${YELLOW}Verify on Sui Explorer:${RESET}"
-echo -e "  https://suiexplorer.com/object/0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d?network=testnet"
+echo -e "  https://suiexplorer.com/object/0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433?network=testnet"

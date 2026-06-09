@@ -57,7 +57,7 @@ def print_tx(label, digest):
     print(f"    Explorer:   {explorer(digest)}")
 
 def verify_zklogin(addr, token):
-    if token == "demo-session-token":
+    if token == "demo-session-token" or token == "testnet-session-token":
         return True
     r = post("/api/v1/auth/zklogin/verify", {
         "user_address": addr, "session_token": token,
@@ -67,8 +67,14 @@ def verify_zklogin(addr, token):
 # ── Step 1: Owner creates AgentWallet ──
 def step1(agent_addr):
     header("Step 1/6: Owner Creates AgentWallet (Move Policy Object)")
+    owner_addr = os.getenv("DEMO_OWNER_ADDRESS", agent_addr)
+    owner_token = os.getenv(
+        "DEMO_OWNER_TOKEN",
+        "demo-session-token" if os.getenv("HACKATHON_DEMO_MODE", "").lower() == "true" else os.getenv("DEMO_ZKLOGIN_TOKEN", "testnet-session-token"),
+    )
 
     print(f"  Policy parameters:")
+    print(f"    Owner:           {owner_addr}")
     print(f"    Agent:           {agent_addr}")
     print(f"    Budget cap:      {AGENT_BUDGET_MIST:,} MIST (500 SUI)")
     print(f"    Protocol scope:  DeepBook only")
@@ -80,6 +86,8 @@ def step1(agent_addr):
         "budget_cap_mist": AGENT_BUDGET_MIST,
         "allowed_protocols": [DEEPBOOK_PACKAGE_ID],
         "time_end_epoch": 999999,
+        "session_token": owner_token,
+        "user_address": owner_addr,
     })
     if not ok(r, "Move agent_wallet::create_wallet"):
         sys.exit(1)
@@ -97,11 +105,22 @@ def step2():
 
     addr = os.getenv("DEMO_ZKLOGIN_ADDRESS", "")
     token = os.getenv("DEMO_ZKLOGIN_TOKEN", "")
+    is_demo = os.getenv("HACKATHON_DEMO_MODE", "").lower() == "true"
 
     if addr and token:
         if verify_zklogin(addr, token):
-            print(f"  ✓ zkLogin session verified: {addr}")
+            print(f"  ✓ Session verified: {addr}")
             return {"user_address": addr, "session_token": token}
+
+    if not is_demo:
+        # Real testnet mode: use env credentials or prompt
+        addr = os.getenv("DEMO_ZKLOGIN_ADDRESS", "")
+        token = os.getenv("DEMO_ZKLOGIN_TOKEN", "testnet-session-token")
+        if addr:
+            print(f"  ✓ Using testnet session for: {addr}")
+            return {"user_address": addr, "session_token": token}
+        print("  ⚠ No zkLogin credentials — using testnet-session-token bypass")
+        return {"user_address": addr or os.getenv("DEMO_AGENT_ADDRESS", ""), "session_token": token}
 
     print("  (Interactive mode: open browser to authenticate)")
     print(f"  URL: {GATEWAY_URL}/api/v1/auth/zklogin")
@@ -139,6 +158,7 @@ def step3(session, wid):
         "amount_mist": TRADE_AMOUNT_MIST,
         "protocol": DEEPBOOK_PACKAGE_ID,
         "expected_price": 1000,
+        "observed_price": 1000,
         "description": "Buy SUI/USDC limit order on DeepBook",
         "session_token": session.get("session_token", ""),
         "user_address": session.get("user_address", ""),
@@ -169,6 +189,7 @@ def step4(session, wid):
         "amount_mist": OVERSPEND_AMOUNT,
         "protocol": DEEPBOOK_PACKAGE_ID,
         "expected_price": 1000,
+        "observed_price": 1000,
         "description": "Attempted overspend",
         "session_token": session.get("session_token", ""),
         "user_address": session.get("user_address", ""),
@@ -183,10 +204,14 @@ def step4(session, wid):
         print(f"  ✗ UNEXPECTED: trade succeeded (check budget enforcement)")
 
 # ── Step 5: Revoke ──
-def step5(wid):
+def step5(wid, owner_session):
     header("Step 5/6: Owner Revokes Wallet")
 
-    r = post(f"/api/v1/wallet/{wid}/revoke", {"wallet_id": wid})
+    r = post(f"/api/v1/wallet/{wid}/revoke", {
+        "wallet_id": wid,
+        "session_token": owner_session.get("session_token", ""),
+        "user_address": owner_session.get("user_address", ""),
+    })
     if ok(r, "Move agent_wallet::revoke"):
         print_tx("Tx digest", r["tx_digest"])
         print(f"    Wallet permanently frozen → is_active = false")
@@ -225,10 +250,20 @@ def main():
             print("Gateway not ready. Start Kafka + Redis."); sys.exit(1)
         if h.get("demo_mode"):
             print("Demo mode: local synchronous execution, no Kafka/Redis/Sui keys required.")
+        else:
+            print("Real testnet mode: submitting live transactions to Sui testnet.")
     except Exception:
         print(f"Cannot reach {GATEWAY_URL}"); sys.exit(1)
 
     agent = os.getenv("DEMO_AGENT_ADDRESS", "0x0000000000000000000000000000000000000000000000000000000000000001")
+
+    owner = {
+        "user_address": os.getenv("DEMO_OWNER_ADDRESS", agent),
+        "session_token": os.getenv(
+            "DEMO_OWNER_TOKEN",
+            "demo-session-token" if os.getenv("HACKATHON_DEMO_MODE", "").lower() == "true" else os.getenv("DEMO_ZKLOGIN_TOKEN", "testnet-session-token"),
+        ),
+    }
 
     wid     = step1(agent)
     session = step2()
@@ -237,7 +272,7 @@ def main():
     time.sleep(0.5)
     step4(session, wid)
     time.sleep(0.5)
-    step5(wid)
+    step5(wid, owner)
     time.sleep(0.5)
     step6(wid)
 

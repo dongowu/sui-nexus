@@ -8,7 +8,7 @@
 | **Tracks** | Agentic Web (Intent Engine) + Walrus |
 | **Repository** | (Your GitHub URL) |
 | **Demo Video** | (YouTube/Cloud storage URL) |
-| **Contract Address** | `0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d` |
+| **Contract Address** | `0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433` |
 
 ---
 
@@ -50,8 +50,8 @@ Demonstrates 7/7 requirements:
 
 | Contract | Testnet Address | Explorer |
 |----------|----------------|----------|
-| Package | `0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d` | [View](https://suiexplorer.com/object/0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d?network=testnet) |
-| Upgrade Cap | `0x7bd41eb7253f93e03f84fe2c963347b62a5cae57a29c8200c92e9a4c6bbfb06b` | [View](https://suiexplorer.com/object/0x7bd41eb7253f93e03f84fe2c963347b62a5cae57a29c8200c92e9a4c6bbfb06b?network=testnet) |
+| Package | `0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433` | [View](https://suiexplorer.com/object/0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433?network=testnet) |
+| Upgrade Cap | `0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f` | [View](https://suiexplorer.com/object/0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f?network=testnet) |
 
 ---
 

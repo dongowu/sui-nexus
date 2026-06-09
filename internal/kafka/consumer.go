@@ -85,6 +85,7 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			}
 			if err := h.handler(session.Context(), &task); err != nil {
 				log.Printf("Failed to handle task %s: %v", task.TaskID, err)
+				continue
 			}
 			session.MarkMessage(msg, "")
 		case <-session.Context().Done():

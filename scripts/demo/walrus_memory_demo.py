@@ -14,7 +14,7 @@ Demonstrates every Walrus track requirement:
 
 Narrative:
   AI agents are stateless today. Sui-Nexus + Walrus makes them stateful.
-  Analyst stores research on Walrus → Trader reads it → coordinated action.
+  Analyst stores research on Walrus → Trader reads it → coordinated follow-up intent.
 
 Usage:
   python3 scripts/demo/walrus_memory_demo.py
@@ -153,7 +153,7 @@ def step2(task_id, blob_id):
 
 # ── Step 3: Trader executes with context ──
 def step3(context):
-    header("Step 3/5: Trader Executes Informed by Walrus Memory")
+    header("Step 3/5: Trader Submits Follow-Up Intent Informed by Walrus Memory")
 
     if context:
         decision = context.get("action", "buy")
@@ -167,21 +167,51 @@ def step3(context):
         tokens   = ["SUI"]
         print(f"  Using default strategy (no shared memory)")
 
+    follow_up = {
+        "timestamp": int(time.time()),
+        "agent": "trader-v1",
+        "source": "walrus-shared-memory",
+        "decision": decision,
+        "tokens": tokens,
+        "reasoning": context.get("reasoning", "") if context else "default strategy",
+        "risk": context.get("risk", "") if context else "unknown",
+    }
+    payload = base64.b64encode(json.dumps(follow_up).encode()).decode()
     tid = str(uuid.uuid4())
     ts  = int(time.time())
-    r = requests.post(f"{GATEWAY_URL}/api/v1/intent", json={
+    req = {
         "task_id": tid,
         "action": "Swap",
         "params": {"amount":"500","token_in":"USDT","token_out":tokens[0],"slippage":"0.3"},
         "agents": [{"address":"0xTraderWallet","share":0.2}],
-    }, headers={
+        "context_payload": payload,
+    }
+
+    move_package = os.getenv("TRADER_MOVE_PACKAGE_ID", "")
+    move_module = os.getenv("TRADER_MOVE_MODULE", "")
+    move_function = os.getenv("TRADER_MOVE_FUNCTION", "")
+    move_args_raw = os.getenv("TRADER_MOVE_ARGUMENTS", "")
+    move_type_args_raw = os.getenv("TRADER_MOVE_TYPE_ARGUMENTS", "")
+    if move_package and move_module and move_function and move_args_raw:
+        req["params"].update({
+            "move_package_object_id": move_package,
+            "move_module": move_module,
+            "move_function": move_function,
+            "move_arguments": json.loads(move_args_raw),
+            "move_type_arguments": json.loads(move_type_args_raw) if move_type_args_raw else [],
+        })
+        print(f"  Live trade path enabled via custom MoveCall config")
+    else:
+        print(f"  No live MoveCall config provided — submitting a verifiable follow-up memory intent")
+
+    r = requests.post(f"{GATEWAY_URL}/api/v1/intent", json=req, headers={
         "Content-Type":"application/json",
         "X-API-Key":TRADER_KEY,
         "X-Signature":hmac_sign(tid, ts, "Swap", "500"),
         "X-Timestamp":str(ts),
     }, timeout=30).json()
 
-    print(f"\n  ✓ Trade submitted: {r.get('task_id','')}")
+    print(f"\n  ✓ Follow-up intent submitted: {r.get('task_id','')}")
     print(f"  ✓ Status: {r.get('status')}")
 
     return tid
@@ -206,7 +236,7 @@ def step4(analyst_tid, trader_tid):
         print(f"    On-chain: {explorer(tt.get('tx_digest',''))}")
 
     print(f"\n  ✓ Two agents, different API keys, shared Walrus memory")
-    print(f"  ✓ Analyst writes → Walrus → Trader reads → coordinated trade")
+    print(f"  ✓ Analyst writes → Walrus → Trader reads → coordinated follow-up intent")
 
 # ── Step 5: Developer tooling summary ──
 def step5():

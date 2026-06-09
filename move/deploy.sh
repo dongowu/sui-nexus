@@ -36,9 +36,8 @@ echo ""
 echo "✅ Deployment successful!"
 echo "📝 Package ID: $PACKAGE_ID"
 echo ""
-echo "💾 Saving to .env file..."
-echo "SUI_MEMORY_PACKAGE_ID=$PACKAGE_ID" >> ../.env
-
+echo "🎉 Done! Update your environment:"
+echo "   export AGENT_WALLET_PACKAGE_ID=\"$PACKAGE_ID\""
 echo ""
-echo "🎉 Done! Add this to your environment:"
-echo "   export SUI_MEMORY_PACKAGE_ID=\"$PACKAGE_ID\""
+echo "Optional live-mode reminder:"
+echo "   export SUI_FUNDING_OBJECT_ID=\"0x...\"   # dedicated coin object for wallet funding"

@@ -4,8 +4,8 @@
 
 > 🏆 Sui Overflow 2026 Submission — Agentic Web (Intent Engine) + Walrus Tracks
 >
-> **Deployed on Sui Testnet**: `0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d`
-> ([Verify on Explorer](https://suiexplorer.com/object/0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d?network=testnet))
+> **Deployed on Sui Testnet**: `0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433`
+> ([Verify on Explorer](https://suiexplorer.com/object/0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433?network=testnet))
 
 ---
 
@@ -117,10 +117,12 @@ sequenceDiagram
     participant Sui as Sui Chain
 
     Note over Owner,Sui: Phase 1 — Wallet Creation
-    Owner->>GW: POST /wallet/create {agent, budget, protocols, window}
+    Owner->>GW: POST /wallet/create {owner_session, agent, budget, protocols, window}
     GW->>Sui: agent_wallet::create_wallet
-    Sui-->>GW: WalletCreated event
-    GW-->>Owner: wallet_id + on-chain tx digest
+    Sui-->>GW: WalletCreated event + shared object ID
+    GW->>Sui: agent_wallet::deposit
+    Sui-->>GW: WalletDeposited event
+    GW-->>Owner: wallet_id + funded balance + tx digest
 
     Note over Owner,Sui: Phase 2 — Agent Authentication (zkLogin)
     Agent->>GW: GET /auth/zklogin
@@ -132,7 +134,7 @@ sequenceDiagram
     GW-->>Agent: session token (verified)
 
     Note over Owner,Sui: Phase 3 — Policy-Enforced Execution
-    Agent->>GW: POST /wallet/execute {amount, protocol}
+    Agent->>GW: POST /wallet/execute {amount, protocol, expected_price, observed_price}
     GW->>GW: GUARDIAN checks:\n✓ slippage < 5%\n✓ budget remaining\n✓ protocol in allowlist
     GW->>Sui: agent_wallet::execute_trade
     Sui->>Sui: ✓ is_active? ✓ time_window?\n✓ agent_addr match? ✓ budget cap?
@@ -143,8 +145,8 @@ sequenceDiagram
     GW-->>Agent: tx_digest
 
     Note over Owner,Sui: Phase 4 — Revocation
-    Owner->>GW: POST /wallet/:id/revoke
-    GW->>Sui: agent_wallet::revoke_wallet
+    Owner->>GW: POST /wallet/:id/revoke {owner_session}
+    GW->>Sui: agent_wallet::revoke
     Sui-->>GW: WalletRevoked (permanent)
 ```
 
@@ -204,7 +206,7 @@ Run the product locally without Kafka, Redis, zkLogin OAuth credentials, or Sui 
 HACKATHON_DEMO_MODE=true ./scripts/demo/run_agent_wallet_demo.sh
 ```
 
-`HACKATHON_DEMO_MODE` is an explicit judge-friendly simulation path. It keeps the same HTTP API, PTB builder, Move-call plans, wallet policy cache, Guardian checks, WebSocket stream, and Walrus memory references, but uses deterministic local digests instead of submitting live Sui transactions. The live testnet path remains available by disabling demo mode and providing Kafka, Redis, zkLogin, signer, gas coin, and package configuration.
+`HACKATHON_DEMO_MODE` is an explicit judge-friendly simulation path. It keeps the same HTTP API, Move-call plans, wallet policy cache, Guardian checks, WebSocket stream, and Walrus memory references, but uses deterministic local digests instead of submitting live Sui transactions. The live testnet path remains available by disabling demo mode and providing Kafka, Redis, zkLogin or testnet bypass tokens, signer, gas coin, funding coin, and package configuration.
 
 Open `web/dashboard.html` after the gateway starts to use the interactive judge console.
 
@@ -221,7 +223,7 @@ Demonstrates the full Intent Engine + Agent Wallet flow with 9/9 requirements:
 5. **Owner revokes wallet** → agent permanently frozen → on-chain event emitted
 6. **Activity log verified** on-chain via Sui Explorer
 
-**Innovation**: Not an agent — the settlement layer every agent needs. zkLogin identity + Move policy enforcement + Guardian risk layer + DeepBook execution. Intent Engine sub-track: agents submit *intents* not transactions — the gateway builds, validates, and executes atomic PTBs with on-chain policy enforcement.
+**Innovation**: Not an agent — the settlement layer every agent needs. zkLogin identity + Move policy enforcement + Guardian risk layer + DeepBook execution. Intent Engine sub-track: agents submit *intents* not transactions — the gateway validates them, persists context, and executes Sui transactions with on-chain policy enforcement.
 
 ### Track 2: Walrus — "AI Agent Memory System"
 
@@ -232,7 +234,7 @@ Demonstrates cross-agent persistent memory with 7/7 requirements:
 1. **Analyst Agent** analyzes market news via LLM → writes context to Walrus
 2. **Gateway** stores blob → mints MemoryObject on-chain (blob_id + task_id)
 3. **Trader Agent** queries shared memory → reads analyst's context from Walrus
-4. **Trader executes** informed by analyst's research → coordinated multi-agent action
+4. **Trader submits a follow-up intent** informed by analyst research, optionally with a custom live MoveCall
 
 **Innovation**: Walrus as the memory layer for the AI agent economy. Not just storage — verifiable, composable, on-chain referenced memory that persists across sessions and agents.
 
@@ -240,8 +242,8 @@ Demonstrates cross-agent persistent memory with 7/7 requirements:
 
 | Contract | Testnet Address | Explorer |
 |----------|----------------|----------|
-| Package | `0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d` | [View](https://suiexplorer.com/object/0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d?network=testnet) |
-| Upgrade Cap | `0x7bd41eb7253f93e03f84fe2c963347b62a5cae57a29c8200c92e9a4c6bbfb06b` | [View](https://suiexplorer.com/object/0x7bd41eb7253f93e03f84fe2c963347b62a5cae57a29c8200c92e9a4c6bbfb06b?network=testnet) |
+| Package | `0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433` | [View](https://suiexplorer.com/object/0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433?network=testnet) |
+| Upgrade Cap | `0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f` | [View](https://suiexplorer.com/object/0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f?network=testnet) |
 
 ---
 
@@ -265,6 +267,7 @@ export REDIS_ADDR="localhost:6379"
 export SUI_RPC_URL="https://fullnode.testnet.sui.io"
 export SUI_SIGNER_PRIVATE_KEY="suiprivkey..."
 export SUI_GAS_OBJECT_ID="0x..."
+export SUI_FUNDING_OBJECT_ID="0x..."    # dedicated coin object for wallet funding
 export SUI_GAS_BUDGET="10000000"
 
 # zkLogin (for Agentic Web track)
@@ -274,7 +277,7 @@ export ZKLOGIN_CLIENT_SECRET="your-google-client-secret"
 
 # Agent Wallet
 export AGENT_WALLET_ENABLED=true
-export AGENT_WALLET_PACKAGE_ID="0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d"
+export AGENT_WALLET_PACKAGE_ID="0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433"
 
 # DeepBook (for real DEX orders)
 export DEEPBOOK_PACKAGE_ID="0xdee9"     # DeepBook V3 testnet package
@@ -316,6 +319,13 @@ python3 scripts/demo/walrus_memory_demo.py
 ./scripts/demo/run_demo.sh
 ```
 
+### Live Smoke Check
+
+```bash
+# After publishing the Move package and setting SUI_FUNDING_OBJECT_ID
+bash scripts/demo/live_testnet_smoke.sh
+```
+
 ### Open Dashboard
 
 ```bash
@@ -334,9 +344,9 @@ open web/dashboard.html
 | `GET` | `/api/v1/auth/zklogin/callback` | OAuth | OAuth callback → zkLogin params |
 | `POST` | `/api/v1/auth/zklogin/submit-proof` | Session | Submit ZK proof from client |
 | `POST` | `/api/v1/auth/zklogin/verify` | Session | Verify zkLogin session |
-| `POST` | `/api/v1/wallet/create` | None | Create Agent Wallet (Move) |
-| `POST` | `/api/v1/wallet/execute` | zkLogin | Agent executes trade (Guardian + Move) |
-| `POST` | `/api/v1/wallet/:id/revoke` | None | Owner revokes wallet |
+| `POST` | `/api/v1/wallet/create` | Owner session | Create and fund Agent Wallet (Move) |
+| `POST` | `/api/v1/wallet/execute` | zkLogin / session | Agent executes trade (Guardian + Move) |
+| `POST` | `/api/v1/wallet/:id/revoke` | Owner session | Owner revokes wallet |
 | `GET` | `/api/v1/wallet/:id` | None | Query wallet state |
 | `GET` | `/api/v1/wallet/:id/activity` | None | Query on-chain activity log |
 | `POST` | `/api/v1/intent` | HMAC | Submit agent trading intent |

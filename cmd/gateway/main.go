@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -99,7 +100,7 @@ func main() {
 		walrusClient := walrus.NewClient(cfg.WalrusAPIURL)
 
 		consumer, err := kafka.NewConsumer(cfg.KafkaBrokers, "sui-nexus-group", "sui-nexus-intents",
-			buildTaskHandler(ptbBuilder, walrusClient, executor, redisStore, hub))
+			buildTaskHandler(ptbBuilder, walrusClient, executor, redisStore, hub, cfg))
 		if err != nil {
 			log.Printf("Warning: Kafka consumer failed: %v", err)
 		} else {
@@ -154,54 +155,92 @@ func buildTaskHandler(
 	executor *ptb.Executor,
 	redisStore *storage.RedisStore,
 	hub *gateway.Hub,
+	cfg *config.Config,
 ) kafka.TaskHandler {
 	return func(ctx context.Context, task *model.Task) error {
 		log.Printf("Processing task %s", task.TaskID)
 
 		// Update status to processing
-		if redisStore != nil {
-			redisStore.UpdateTaskStatus(ctx, task.TaskID, model.StatusProcessing)
-		}
+		task.Status = model.StatusProcessing
+		task.UpdatedAt = time.Now()
+		persistTaskState(ctx, redisStore, hub, task)
 
 		// Write context to Walrus if present
 		if task.Intent != nil && task.Intent.ContextPayload != "" {
 			blobID, err := walrusClient.Write(ctx, []byte(task.Intent.ContextPayload))
 			if err != nil {
-				log.Printf("Walrus write failed for task %s: %v", task.TaskID, err)
+				return failTask(ctx, redisStore, hub, task, fmt.Errorf("walrus write failed: %w", err))
 			} else {
 				task.BlobID = blobID
 				log.Printf("Walrus blob %s stored for task %s", blobID, task.TaskID)
 			}
+			if cfg == nil || cfg.AgentWalletPackageID == "" {
+				return failTask(ctx, redisStore, hub, task, fmt.Errorf("memory object package id is not configured"))
+			}
+			memoryPTB, err := ptbBuilder.BuildMemoryObjectCreate(task.TaskID, task.BlobID, cfg.AgentWalletPackageID)
+			if err != nil {
+				return failTask(ctx, redisStore, hub, task, fmt.Errorf("memory object build failed: %w", err))
+			}
+			memoryResp, err := executor.ExecutePTBDetailed(ctx, memoryPTB)
+			if err != nil {
+				return failTask(ctx, redisStore, hub, task, fmt.Errorf("memory object execution failed: %w", err))
+			}
+			task.MemoryTxDigest = memoryResp.Digest
+			task.TxDigest = memoryResp.Digest
+			log.Printf("MemoryObject minted for task %s, digest: %s", task.TaskID, memoryResp.Digest)
 		}
 
 		// Build PTB
 		ptbTxn, err := ptbBuilder.Build(task)
 		if err != nil {
-			log.Printf("PTB build failed for task %s: %v", task.TaskID, err)
-			return err
+			return failTask(ctx, redisStore, hub, task, fmt.Errorf("ptb build failed: %w", err))
 		}
 
-		// Execute PTB
-		digest, err := executor.ExecutePTB(ctx, ptbTxn)
-		if err != nil {
-			log.Printf("PTB execution failed for task %s: %v", task.TaskID, err)
-			return err
-		}
+		if isExecutablePTB(ptbTxn) {
+			// Execute PTB
+			digest, err := executor.ExecutePTB(ctx, ptbTxn)
+			if err != nil {
+				return failTask(ctx, redisStore, hub, task, fmt.Errorf("ptb execution failed: %w", err))
+			}
 
-		log.Printf("PTB executed for task %s, digest: %s", task.TaskID, digest)
-		task.TxDigest = digest
+			log.Printf("PTB executed for task %s, digest: %s", task.TaskID, digest)
+			task.TxDigest = digest
+		} else if task.MemoryTxDigest == "" {
+			return failTask(ctx, redisStore, hub, task, fmt.Errorf("task did not produce an executable Sui transaction"))
+		}
+		task.Status = model.StatusCompleted
+		task.UpdatedAt = time.Now()
 
 		// Update final status
-		if redisStore != nil {
-			task.Status = model.StatusCompleted
-			redisStore.SaveTask(ctx, task)
-		}
-
-		// Broadcast to WebSocket clients
-		if hub != nil {
-			hub.BroadcastTask(task)
-		}
+		persistTaskState(ctx, redisStore, hub, task)
 
 		return nil
 	}
+}
+
+func isExecutablePTB(ptbTxn *ptb.PTB) bool {
+	if ptbTxn == nil {
+		return false
+	}
+	return ptbTxn.Transfer != nil || ptbTxn.MoveCall != nil || ptbTxn.TransactionBytes != ""
+}
+
+func persistTaskState(ctx context.Context, redisStore *storage.RedisStore, hub *gateway.Hub, task *model.Task) {
+	if redisStore != nil {
+		if err := redisStore.SaveTask(ctx, task); err != nil {
+			log.Printf("Failed to persist task %s: %v", task.TaskID, err)
+		}
+	}
+	if hub != nil {
+		hub.BroadcastTask(task)
+	}
+}
+
+func failTask(ctx context.Context, redisStore *storage.RedisStore, hub *gateway.Hub, task *model.Task, err error) error {
+	task.Status = model.StatusFailed
+	task.UpdatedAt = time.Now()
+	task.RetryCount++
+	persistTaskState(ctx, redisStore, hub, task)
+	log.Printf("Task %s failed: %v", task.TaskID, err)
+	return err
 }

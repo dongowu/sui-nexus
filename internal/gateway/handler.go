@@ -485,8 +485,11 @@ func (h *Handler) HandleSubmitProof(c *gin.Context) {
 		return
 	}
 
-	var req zklogin.ProofSubmission
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var payload struct {
+		zklogin.ProofSubmission
+		SessionToken string `json:"session_token"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -494,29 +497,24 @@ func (h *Handler) HandleSubmitProof(c *gin.Context) {
 	// The client must send back the session token so we can match the session
 	sessionToken := c.GetHeader("X-Session-Token")
 	if sessionToken == "" {
-		// Also accept in body
-		var body struct {
-			SessionToken string `json:"session_token"`
-		}
-		c.ShouldBindJSON(&body)
-		sessionToken = body.SessionToken
+		sessionToken = payload.SessionToken
 	}
 	if sessionToken == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "session_token is required"})
 		return
 	}
 
-	if err := h.ephemeralKeyMgr.SubmitProof(sessionToken, req.UserAddress, req.AddressSeed, req.Proof); err != nil {
+	if err := h.ephemeralKeyMgr.SubmitProof(sessionToken, payload.UserAddress, payload.AddressSeed, payload.Proof); err != nil {
 		log.Printf("Proof submission failed: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	log.Printf("zkLogin proof submitted: address=%s", req.UserAddress)
+	log.Printf("zkLogin proof submitted: address=%s", payload.UserAddress)
 
 	c.JSON(http.StatusOK, gin.H{
 		"valid":        true,
-		"user_address": req.UserAddress,
+		"user_address": payload.UserAddress,
 	})
 }
 

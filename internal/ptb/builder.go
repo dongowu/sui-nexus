@@ -235,12 +235,16 @@ func prorateAmount(amount, basisPoints uint64) uint64 {
 
 // BuildAgentWalletCreate builds a PTB to create a new AgentWallet.
 func (b *Builder) BuildAgentWalletCreate(
+	ownerAddress string,
 	agentAddress string,
 	budgetCapMist uint64,
-	allowedProtocols []string,
+	_ []string,
 	timeEndEpoch uint64,
 	packageID string,
 ) (*PTB, error) {
+	if strings.TrimSpace(ownerAddress) == "" {
+		return nil, fmt.Errorf("owner address is required")
+	}
 	if strings.TrimSpace(agentAddress) == "" {
 		return nil, fmt.Errorf("agent address is required")
 	}
@@ -258,10 +262,11 @@ func (b *Builder) BuildAgentWalletCreate(
 			PackageObjectID: packageID,
 			Module:          "agent_wallet",
 			Function:        "create_wallet",
+			TypeArguments:   []interface{}{},
 			Arguments: []interface{}{
+				ownerAddress,
 				agentAddress,
 				fmt.Sprintf("%d", budgetCapMist),
-				allowedProtocols,
 				fmt.Sprintf("%d", timeEndEpoch),
 			},
 		},
@@ -302,6 +307,7 @@ func (b *Builder) BuildAgentWalletExecuteTrade(
 			PackageObjectID: packageID,
 			Module:          "agent_wallet",
 			Function:        "execute_trade",
+			TypeArguments:   []interface{}{},
 			Arguments: []interface{}{
 				walletID,
 				agentAddr,
@@ -317,10 +323,14 @@ func (b *Builder) BuildAgentWalletExecuteTrade(
 // BuildAgentWalletRevoke builds a PTB for the owner to revoke a wallet.
 func (b *Builder) BuildAgentWalletRevoke(
 	walletID string,
+	ownerAddress string,
 	packageID string,
 ) (*PTB, error) {
 	if strings.TrimSpace(walletID) == "" {
 		return nil, fmt.Errorf("wallet id is required")
+	}
+	if strings.TrimSpace(ownerAddress) == "" {
+		return nil, fmt.Errorf("owner address is required")
 	}
 	if strings.TrimSpace(packageID) == "" {
 		return nil, fmt.Errorf("package id is required")
@@ -333,8 +343,10 @@ func (b *Builder) BuildAgentWalletRevoke(
 			PackageObjectID: packageID,
 			Module:          "agent_wallet",
 			Function:        "revoke",
+			TypeArguments:   []interface{}{},
 			Arguments: []interface{}{
 				walletID,
+				ownerAddress,
 			},
 		},
 	}, nil
@@ -343,11 +355,15 @@ func (b *Builder) BuildAgentWalletRevoke(
 // BuildAgentWalletDeposit builds a PTB for the owner to deposit SUI into a wallet.
 func (b *Builder) BuildAgentWalletDeposit(
 	walletID string,
+	ownerAddress string,
 	coinID string,
 	packageID string,
 ) (*PTB, error) {
 	if strings.TrimSpace(walletID) == "" {
 		return nil, fmt.Errorf("wallet id is required")
+	}
+	if strings.TrimSpace(ownerAddress) == "" {
+		return nil, fmt.Errorf("owner address is required")
 	}
 	if strings.TrimSpace(coinID) == "" {
 		return nil, fmt.Errorf("coin id is required")
@@ -363,9 +379,40 @@ func (b *Builder) BuildAgentWalletDeposit(
 			PackageObjectID: packageID,
 			Module:          "agent_wallet",
 			Function:        "deposit",
+			TypeArguments:   []interface{}{},
 			Arguments: []interface{}{
 				walletID,
+				ownerAddress,
 				coinID,
+			},
+		},
+	}, nil
+}
+
+// BuildMemoryObjectCreate builds a PTB to persist a Walrus blob reference
+// on-chain through agent_memory::create_memory.
+func (b *Builder) BuildMemoryObjectCreate(taskID, blobID, packageID string) (*PTB, error) {
+	if strings.TrimSpace(taskID) == "" {
+		return nil, fmt.Errorf("task id is required")
+	}
+	if strings.TrimSpace(blobID) == "" {
+		return nil, fmt.Errorf("blob id is required")
+	}
+	if strings.TrimSpace(packageID) == "" {
+		return nil, fmt.Errorf("package id is required")
+	}
+
+	return &PTB{
+		Action:    "CreateMemoryObject",
+		GasBudget: b.gasBudget,
+		MoveCall: &MoveCallPlan{
+			PackageObjectID: packageID,
+			Module:          "agent_memory",
+			Function:        "create_memory",
+			TypeArguments:   []interface{}{},
+			Arguments: []interface{}{
+				taskID,
+				blobID,
 			},
 		},
 	}, nil
@@ -415,7 +462,7 @@ func (b *Builder) BuildAgentWalletExecuteDeepBook(
 				fmt.Sprintf("%v", isBid),
 				"true", // pay_with_deep
 				fmt.Sprintf("%d", expireTimestamp),
-				"0x6",  // Clock shared object address on Sui
+				"0x6", // Clock shared object address on Sui
 			},
 		},
 	}, nil

@@ -12,6 +12,7 @@ type Config struct {
 	SuiSignerMnemonic   string
 	SuiSignerPrivateKey string
 	SuiGasObjectID      string
+	SuiFundingObjectID  string
 	SuiGasBudget        uint64
 	WalrusAPIURL        string
 	KafkaBrokers        []string
@@ -49,7 +50,7 @@ func Load() *Config {
 	agentWalletEnabled := os.Getenv("AGENT_WALLET_ENABLED") == "true" || hackathonDemoMode
 	agentWalletPackageID := getEnv("AGENT_WALLET_PACKAGE_ID", "")
 	if hackathonDemoMode && agentWalletPackageID == "" {
-		agentWalletPackageID = "0x28c35c355590d81c80f86b43b42d21041fdbc0ab34546ff558b48270a4ff277d"
+		agentWalletPackageID = "0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433"
 	}
 	return &Config{
 		ServerPort:           getEnv("SERVER_PORT", "8080"),
@@ -57,6 +58,7 @@ func Load() *Config {
 		SuiSignerMnemonic:    getEnv("SUI_SIGNER_MNEMONIC", ""),
 		SuiSignerPrivateKey:  getEnv("SUI_SIGNER_PRIVATE_KEY", ""),
 		SuiGasObjectID:       getEnv("SUI_GAS_OBJECT_ID", ""),
+		SuiFundingObjectID:   getEnv("SUI_FUNDING_OBJECT_ID", ""),
 		SuiGasBudget:         gasBudget,
 		WalrusAPIURL:         getEnv("WALRUS_API_URL", "https://walrus.testnet.sui.io"),
 		KafkaBrokers:         parseKafkaBrokers(),

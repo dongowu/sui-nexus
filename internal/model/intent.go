@@ -57,6 +57,7 @@ type Task struct {
 	Status     TaskStatus     `json:"status"`
 	Intent     *IntentRequest `json:"intent"`
 	TxDigest   string         `json:"tx_digest,omitempty"`
+	MemoryTxDigest string     `json:"memory_tx_digest,omitempty"`
 	BlobID     string         `json:"blob_id,omitempty"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`

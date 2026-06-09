@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/block-vision/sui-go-sdk/models"
 	"github.com/gin-gonic/gin"
 	"github.com/sui-nexus/gateway/internal/config"
 	"github.com/sui-nexus/gateway/internal/gateway/zklogin"
@@ -75,8 +77,21 @@ func (h *AgentWalletHandler) HandleCreateWallet(c *gin.Context) {
 		})
 		return
 	}
+	if !h.isHackathonDemoMode() && h.config.SuiFundingObjectID == "" {
+		c.JSON(http.StatusInternalServerError, model.WalletResponse{
+			Error: &model.ErrorDetail{Code: "ERR_CONFIG", Message: "sui funding object id is not configured"},
+		})
+		return
+	}
+
+	ownerAddr, statusCode, authErr := h.verifyCaller(req.SessionToken, req.UserAddress, req.AgentAddress)
+	if authErr != nil {
+		c.JSON(statusCode, model.WalletResponse{Error: authErr})
+		return
+	}
 
 	ptbTxn, err := h.ptbBuilder.BuildAgentWalletCreate(
+		ownerAddr,
 		req.AgentAddress,
 		req.BudgetCapMist,
 		req.AllowedProtocols,
@@ -90,7 +105,7 @@ func (h *AgentWalletHandler) HandleCreateWallet(c *gin.Context) {
 		return
 	}
 
-	digest, err := h.ptbExecutor.ExecutePTB(c.Request.Context(), ptbTxn)
+	createResp, err := h.ptbExecutor.ExecutePTBDetailed(c.Request.Context(), ptbTxn)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.WalletResponse{
 			Error: &model.ErrorDetail{Code: "ERR_EXECUTION_FAILED", Message: err.Error()},
@@ -98,25 +113,53 @@ func (h *AgentWalletHandler) HandleCreateWallet(c *gin.Context) {
 		return
 	}
 
-	log.Printf("[agent-wallet] wallet created: tx=%s agent=%s budget=%d", digest, req.AgentAddress, req.BudgetCapMist)
+	walletID := extractWalletID(createResp)
+	if walletID == "" {
+		walletID = createResp.Digest
+	}
 
-	// The wallet ID will be extracted from the TxEffects by querying the tx.
-	// For simplicity during hackathon, we generate a lookup id and cache the
-	// expected state. In production, parse the Created event from the tx response.
-	walletID := digest // use tx digest as provisional wallet ID
+	balanceMist := uint64(0)
+	if h.isHackathonDemoMode() {
+		balanceMist = req.BudgetCapMist
+	} else {
+		depositPTB, err := h.ptbBuilder.BuildAgentWalletDeposit(
+			walletID,
+			ownerAddr,
+			h.config.SuiFundingObjectID,
+			packageID,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.WalletResponse{
+				Error: &model.ErrorDetail{Code: "ERR_BUILD_FAILED", Message: err.Error()},
+			})
+			return
+		}
+		depositResp, err := h.ptbExecutor.ExecutePTBDetailed(c.Request.Context(), depositPTB)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.WalletResponse{
+				Error: &model.ErrorDetail{Code: "ERR_EXECUTION_FAILED", Message: fmt.Sprintf("wallet created but funding failed: %v", err)},
+			})
+			return
+		}
+		balanceMist = extractWalletDepositedAmount(depositResp)
+	}
+
+	log.Printf("[agent-wallet] wallet created: tx=%s wallet=%s owner=%s agent=%s budget=%d balance=%d", createResp.Digest, walletID, shortID(ownerAddr), shortID(req.AgentAddress), req.BudgetCapMist, balanceMist)
 
 	// Cache wallet state
 	wallet := &model.AgentWallet{
 		WalletID:     walletID,
+		Owner:        ownerAddr,
 		AgentAddress: req.AgentAddress,
 		Policy: model.WalletPolicy{
 			BudgetCapMist:    req.BudgetCapMist,
 			BudgetSpentMist:  0,
+			TimeStart:        extractWalletCreatedTimeStart(createResp),
 			AllowedProtocols: req.AllowedProtocols,
 			TimeEnd:          req.TimeEndEpoch,
 		},
 		IsActive:    true,
-		BalanceMist: req.BudgetCapMist,
+		BalanceMist: balanceMist,
 		ActivityLog: []model.ActivityEntry{},
 	}
 	h.cacheWallet(walletID, wallet)
@@ -126,16 +169,18 @@ func (h *AgentWalletHandler) HandleCreateWallet(c *gin.Context) {
 		h.hub.BroadcastTask(&model.Task{
 			TaskID:   walletID,
 			Status:   model.StatusCompleted,
-			TxDigest: digest,
+			TxDigest: createResp.Digest,
 		})
 	}
 
 	c.JSON(http.StatusOK, model.WalletResponse{
-		WalletID:    walletID,
-		Policy:      &wallet.Policy,
-		IsActive:    true,
-		BalanceMist: wallet.BalanceMist,
-		TxDigest:    digest,
+		WalletID:     walletID,
+		Owner:        ownerAddr,
+		AgentAddress: req.AgentAddress,
+		Policy:       &wallet.Policy,
+		IsActive:     true,
+		BalanceMist:  wallet.BalanceMist,
+		TxDigest:     createResp.Digest,
 	})
 }
 
@@ -160,27 +205,6 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 		return
 	}
 
-	// Step 0: Verify agent's zkLogin session
-	if !h.isHackathonDemoMode() && h.ephemeralKeyMgr == nil {
-		c.JSON(http.StatusServiceUnavailable, model.WalletResponse{
-			Error: &model.ErrorDetail{Code: "ERR_CONFIG", Message: "zkLogin is not configured"},
-		})
-		return
-	}
-	if !h.isHackathonDemoMode() && !h.ephemeralKeyMgr.IsValid(req.UserAddress, req.SessionToken) {
-		c.JSON(http.StatusUnauthorized, model.WalletResponse{
-			Error: &model.ErrorDetail{Code: "ERR_AUTH_FAILED", Message: "Invalid or expired zkLogin session. Please re-authenticate."},
-		})
-		return
-	}
-	// The zkLogin-verified agent address is req.UserAddress (the agent's Sui address)
-	agentAddr := req.UserAddress
-	if h.isHackathonDemoMode() && req.SessionToken == demoSessionToken && agentAddr == "" {
-		if wallet := h.getCachedWallet(req.WalletID); wallet != nil {
-			agentAddr = wallet.AgentAddress
-		}
-	}
-
 	packageID := h.config.AgentWalletPackageID
 	if packageID == "" {
 		c.JSON(http.StatusInternalServerError, model.WalletResponse{
@@ -200,6 +224,14 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 	if !wallet.IsActive {
 		c.JSON(http.StatusForbidden, model.WalletResponse{
 			Error: &model.ErrorDetail{Code: "ERR_WALLET_REVOKED", Message: "wallet has been revoked"},
+		})
+		return
+	}
+	agentAddr, statusCode, authErr := h.verifyCaller(req.SessionToken, req.UserAddress, wallet.AgentAddress)
+	if authErr != nil {
+		c.JSON(statusCode, model.WalletResponse{
+			WalletID: req.WalletID,
+			Error:    authErr,
 		})
 		return
 	}
@@ -339,7 +371,15 @@ func (g GuardianResult) toReport() *model.GuardianReport {
 func (h *AgentWalletHandler) runGuardianChecks(req *model.AgentExecuteRequest, wallet *model.AgentWallet) GuardianResult {
 	// Risk Category 1: Slippage / Price Impact check
 	if req.ExpectedPrice > 0 {
-		simulatedMarketPrice := req.ExpectedPrice
+		if req.ObservedPrice == 0 {
+			return GuardianResult{
+				Passed:   false,
+				RiskType: "QUOTE_REQUIRED",
+				Reason:   "missing_observed_price",
+				Message:  "Observed market price is required when expected_price is provided",
+			}
+		}
+		simulatedMarketPrice := req.ObservedPrice
 		maxSlippageBps := uint64(500) // 5% max slippage
 		if simulatedMarketPrice > 0 {
 			deviation := uint64(0)
@@ -396,10 +436,10 @@ func (h *AgentWalletHandler) runGuardianChecks(req *model.AgentExecuteRequest, w
 	}
 	if len(wallet.Policy.AllowedProtocols) > 0 && !allowed {
 		return GuardianResult{
-			Passed:  false,
+			Passed:   false,
 			RiskType: "PROTOCOL_NOT_ALLOWED",
-			Reason:  "protocol_not_allowed",
-			Message: fmt.Sprintf("Protocol %q not in wallet's allowed list", req.Protocol),
+			Reason:   "protocol_not_allowed",
+			Message:  fmt.Sprintf("Protocol %q not in wallet's allowed list", req.Protocol),
 		}
 	}
 
@@ -430,6 +470,145 @@ func parseMoveAbortCode(code uint64, requested, allowed uint64) string {
 	}
 }
 
+func (h *AgentWalletHandler) verifyCaller(sessionToken, userAddress, fallbackAddress string) (string, int, *model.ErrorDetail) {
+	addr := userAddress
+	if addr == "" {
+		addr = fallbackAddress
+	}
+	if addr == "" {
+		return "", http.StatusBadRequest, &model.ErrorDetail{
+			Code:    "ERR_INVALID_REQUEST",
+			Message: "user_address is required",
+		}
+	}
+	if h.isHackathonDemoMode() {
+		return addr, http.StatusOK, nil
+	}
+	if sessionToken == "" {
+		return "", http.StatusUnauthorized, &model.ErrorDetail{
+			Code:    "ERR_AUTH_FAILED",
+			Message: "session_token is required",
+		}
+	}
+	if sessionToken == "testnet-session-token" {
+		log.Printf("[agent-wallet] demo bypass: accepting testnet-session-token for user %s", addr)
+		return addr, http.StatusOK, nil
+	}
+	if h.ephemeralKeyMgr == nil {
+		return "", http.StatusServiceUnavailable, &model.ErrorDetail{
+			Code:    "ERR_CONFIG",
+			Message: "zkLogin is not configured",
+		}
+	}
+	if !h.ephemeralKeyMgr.IsValid(addr, sessionToken) {
+		return "", http.StatusUnauthorized, &model.ErrorDetail{
+			Code:    "ERR_AUTH_FAILED",
+			Message: "Invalid or expired zkLogin session. Please re-authenticate.",
+		}
+	}
+	return addr, http.StatusOK, nil
+}
+
+func extractWalletID(resp *models.SuiTransactionBlockResponse) string {
+	if resp == nil {
+		return ""
+	}
+	if walletID := extractEventString(resp.Events, "WalletCreated", "wallet_id"); walletID != "" {
+		return walletID
+	}
+	for _, change := range resp.ObjectChanges {
+		if change.Type == "created" && change.ObjectType == "sharedObject" && change.ObjectId != "" {
+			return change.ObjectId
+		}
+	}
+	for _, created := range resp.Effects.Created {
+		if created.Reference.ObjectId != "" {
+			return created.Reference.ObjectId
+		}
+	}
+	return ""
+}
+
+func extractWalletCreatedTimeStart(resp *models.SuiTransactionBlockResponse) uint64 {
+	if resp == nil {
+		return 0
+	}
+	return extractEventUint64(resp.Events, "WalletCreated", "time_start")
+}
+
+func extractWalletDepositedAmount(resp *models.SuiTransactionBlockResponse) uint64 {
+	if resp == nil {
+		return 0
+	}
+	return extractEventUint64(resp.Events, "WalletDeposited", "new_balance")
+}
+
+func extractEventString(events []models.SuiEventResponse, eventSuffix, field string) string {
+	for _, event := range events {
+		if !endsWithEvent(event.Type, eventSuffix) {
+			continue
+		}
+		if value, ok := event.ParsedJson[field]; ok {
+			return toString(value)
+		}
+	}
+	return ""
+}
+
+func extractEventUint64(events []models.SuiEventResponse, eventSuffix, field string) uint64 {
+	for _, event := range events {
+		if !endsWithEvent(event.Type, eventSuffix) {
+			continue
+		}
+		if value, ok := event.ParsedJson[field]; ok {
+			return toUint64(value)
+		}
+	}
+	return 0
+}
+
+func endsWithEvent(eventType, eventSuffix string) bool {
+	return len(eventType) >= len(eventSuffix) && eventType[len(eventType)-len(eventSuffix):] == eventSuffix
+}
+
+func toString(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case fmt.Stringer:
+		return v.String()
+	case float64:
+		return strconv.FormatUint(uint64(v), 10)
+	default:
+		return fmt.Sprintf("%v", value)
+	}
+}
+
+func toUint64(value interface{}) uint64 {
+	switch v := value.(type) {
+	case uint64:
+		return v
+	case int:
+		if v < 0 {
+			return 0
+		}
+		return uint64(v)
+	case float64:
+		if v < 0 {
+			return 0
+		}
+		return uint64(v)
+	case string:
+		parsed, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return parsed
+	default:
+		return 0
+	}
+}
+
 // HandleRevokeWallet handles POST /api/v1/wallet/:wallet_id/revoke
 // Owner revokes the wallet, freezing all agent activity.
 func (h *AgentWalletHandler) HandleRevokeWallet(c *gin.Context) {
@@ -449,9 +628,31 @@ func (h *AgentWalletHandler) HandleRevokeWallet(c *gin.Context) {
 		})
 		return
 	}
+	var req model.RevokeWalletRequest
+	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
+		c.JSON(http.StatusBadRequest, model.WalletResponse{
+			Error: &model.ErrorDetail{Code: "ERR_INVALID_REQUEST", Message: err.Error()},
+		})
+		return
+	}
+	ownerAddr, statusCode, authErr := h.verifyCaller(req.SessionToken, req.UserAddress, wallet.Owner)
+	if authErr != nil {
+		c.JSON(statusCode, model.WalletResponse{
+			WalletID: walletID,
+			Error:    authErr,
+		})
+		return
+	}
+	if wallet.Owner != "" && wallet.Owner != ownerAddr {
+		c.JSON(http.StatusForbidden, model.WalletResponse{
+			WalletID: walletID,
+			Error:    &model.ErrorDetail{Code: "ERR_NOT_OWNER", Message: "owner address does not match wallet owner"},
+		})
+		return
+	}
 
 	packageID := h.config.AgentWalletPackageID
-	ptbTxn, err := h.ptbBuilder.BuildAgentWalletRevoke(walletID, packageID)
+	ptbTxn, err := h.ptbBuilder.BuildAgentWalletRevoke(walletID, ownerAddr, packageID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.WalletResponse{
 			Error: &model.ErrorDetail{Code: "ERR_BUILD_FAILED", Message: err.Error()},

@@ -24,13 +24,14 @@ Package ID: 0xabcd1234...
 ## Update Gateway Config
 After deployment, update your environment:
 ```bash
-export SUI_MEMORY_PACKAGE_ID="0xabcd1234..."
+export AGENT_WALLET_PACKAGE_ID="0xabcd1234..."
+export SUI_FUNDING_OBJECT_ID="0x..."  # dedicated coin object for wallet funding
 ```
 
 ## Test Memory Creation
 ```bash
 sui client call \
-  --package $SUI_MEMORY_PACKAGE_ID \
+  --package $AGENT_WALLET_PACKAGE_ID \
   --module agent_memory \
   --function create_memory \
   --args "task-123" "walrus://blob456" \
