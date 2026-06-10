@@ -9,7 +9,7 @@
 | Sui CLI | ✅ 已安装 `/opt/homebrew/bin/sui` |
 | 测试网钱包 | ✅ `0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1` |
 | Gas Coin | ✅ `0x111fbd6db848078d54afcd654406d572cccc1cc78e705333750c1e5c006e017d` (余额: 0.47 SUI) |
-| 已部署 Package | ✅ `0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433` |
+| 已部署 Package | ✅ `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058` (v2) |
 | 私钥 | ✅ 已导出（`suiprivkey1qq6ulqzpm...`） |
 
 **注意**: 钱包只有 0.47 SUI，足够录制 demo 但建议后续补充测试网 funds。
@@ -173,7 +173,7 @@ export SUI_SIGNER_PRIVATE_KEY="suiprivkey1qq6ulqzpm7hkhxaa7z7gyvfa44mahz03xwr2uz
 export SUI_GAS_OBJECT_ID="0x111fbd6db848078d54afcd654406d572cccc1cc78e705333750c1e5c006e017d"
 export SUI_FUNDING_OBJECT_ID="0x..."
 export SUI_SIGNER_MNEMONIC=""
-export AGENT_WALLET_PACKAGE_ID="0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433"
+export AGENT_WALLET_PACKAGE_ID="0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058"
 export DEEPBOOK_PACKAGE_ID="0xdee9"
 export DEEPBOOK_POOL_ID=""
 export WALRUS_API_URL="https://walrus.testnet.sui.io"

@@ -14,7 +14,7 @@ export SUI_GAS_OBJECT_ID='0x...'
 export SUI_FUNDING_OBJECT_ID='0x...'
 
 # Required — Package ID (already deployed)
-export AGENT_WALLET_PACKAGE_ID='0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433'
+export AGENT_WALLET_PACKAGE_ID='0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058'
 
 # Optional — Real DeepBook orders
 export DEEPBOOK_POOL_ID='0x...'

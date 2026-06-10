@@ -49,7 +49,7 @@ echo "════════════════════════�
 echo "  Sui-Nexus Testnet Recording Mode"
 echo "══════════════════════════════════════════════════════"
 echo "  RPC URL:          ${SUI_RPC_URL:-https://fullnode.testnet.sui.io}"
-echo "  Package ID:       ${AGENT_WALLET_PACKAGE_ID:-0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433}"
+echo "  Package ID:       ${AGENT_WALLET_PACKAGE_ID:-0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058}"
 echo "  Gateway:         ${GATEWAY_URL}"
 echo "  DeepBook Pool:   ${DEEPBOOK_POOL_ID:-not configured}"
 echo "══════════════════════════════════════════════════════"

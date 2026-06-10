@@ -11,7 +11,7 @@
 
 | 合约 | 地址 | Explorer |
 |------|------|----------|
-| Package | `0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433` | [View](https://suiexplorer.com/object/0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433?network=testnet) |
+| Package | `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058` (v2) | [View](https://suiexplorer.com/object/0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058?network=testnet) |
 | Upgrade Cap | `0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f` | [View](https://suiexplorer.com/object/0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f?network=testnet) |
 
 ## 提交材料清单
@@ -51,7 +51,7 @@ export SUI_RPC_URL="https://fullnode.testnet.sui.io"
 export SUI_SIGNER_PRIVATE_KEY="suiprivkey..."
 export SUI_GAS_OBJECT_ID="0x..."
 export SUI_FUNDING_OBJECT_ID="0x..."
-export AGENT_WALLET_PACKAGE_ID="0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433"
+export AGENT_WALLET_PACKAGE_ID="0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058"
 
 # 3. 启动网关
 go run cmd/gateway/main.go

@@ -266,7 +266,6 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 		req.Protocol,
 		req.ExpectedPrice,
 		req.Description,
-		req.ObservedPrice,
 		packageID,
 	)
 	if err != nil {

@@ -53,7 +53,7 @@ Run: `python3 scripts/demo/walrus_memory_demo.py`
 
 ### Part 5: Chain Verification (30 seconds)
 
-**Show**: Explorer with contract address `0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433`
+**Show**: Explorer with contract address `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058`
 
 ---
 

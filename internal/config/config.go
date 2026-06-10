@@ -50,7 +50,7 @@ func Load() *Config {
 	agentWalletEnabled := os.Getenv("AGENT_WALLET_ENABLED") == "true" || hackathonDemoMode
 	agentWalletPackageID := getEnv("AGENT_WALLET_PACKAGE_ID", "")
 	if hackathonDemoMode && agentWalletPackageID == "" {
-		agentWalletPackageID = "0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433"
+		agentWalletPackageID = "0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058"
 	}
 	return &Config{
 		ServerPort:           getEnv("SERVER_PORT", "8080"),

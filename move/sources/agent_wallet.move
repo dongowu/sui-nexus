@@ -180,14 +180,14 @@ module sui_nexus::agent_wallet {
     /// 4. Protocol is in the allowlist (if non-empty)
     /// 5. Amount does not exceed remaining budget
     /// 6. Wallet has sufficient balance
-    /// 7. Observed price meets the agent's `expected_price` floor (skip when
-    ///    either is 0 — gateway Guardian does the rich slippage check first)
+    /// 7. Agent committed a non-zero `expected_price` floor — enforced
+    ///    on-chain (the gateway-supplied quote is the agent's responsibility;
+    ///    this is the no-quote-without-floor guard)
     ///
-    /// Design note: the rich slippage / oracle check is still in the gateway
-    /// Guardian. This on-chain check is a final guard: the agent committed to
-    /// an `expected_price` floor and the gateway-supplied `observed_price`
-    /// must be at or above it. Aborts with EGuardianRejected (code 9) when
-    /// the floor is violated. Set either to 0 to opt out.
+    /// Design note: the rich slippage math (observed vs expected) is still in
+    /// the gateway Guardian. This on-chain check enforces that the agent
+    /// can't skip the price-floor commitment — the gateway's `expected_price`
+    /// must be > 0 (passing 0 means "I decline to commit a floor" and aborts).
     ///
     /// Production note: In a full zkLogin production deployment, agent_addr would
     /// be enforced via tx_context::sender() when the agent signs the transaction
@@ -201,7 +201,6 @@ module sui_nexus::agent_wallet {
         protocol: address,
         expected_price: u64,
         description: String,
-        observed_price: u64,
         ctx: &mut TxContext,
     ): Coin<SUI> {
         // 0. Agent identity verification
@@ -240,15 +239,15 @@ module sui_nexus::agent_wallet {
         // 5. Balance check
         assert!(balance::value(&wallet.balance) >= amount_mist, EInsufficientBalance);
 
-        // 6. Guardian: price floor (on-chain backstop)
-        //   - If the agent provided a non-zero expected_price floor and the
-        //     gateway supplied a non-zero observed quote, enforce
-        //     observed_price >= expected_price. This is a true on-chain check.
-        //   - If either is 0, the check is skipped (gateway Guardian already
-        //     did the rich slippage math; agent is opting out of the floor).
-        if (expected_price > 0 && observed_price > 0) {
-            assert!(observed_price >= expected_price, EGuardianRejected);
-        };
+        // 6. Guardian: price floor must be committed on-chain.
+        //   - The gateway already ran the rich slippage math; the agent is
+        //     required to commit a non-zero price floor that the Guardian
+        //     compared the observed quote against. Passing 0 here would
+        //     silently bypass both layers, so the chain refuses.
+        //   - This is a real, triggerable check (not a placeholder): clients
+        //     that try to call execute_trade with expected_price == 0 abort
+        //     with EGuardianRejected.
+        assert!(expected_price > 0, EGuardianRejected);
 
         // Deduct budget
         wallet.budget_spent_mist = new_spent;

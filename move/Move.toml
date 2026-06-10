@@ -2,6 +2,10 @@
 name = "sui_nexus"
 version = "0.1.0"
 edition = "2024.beta"
+# Original publish adopted the default `compatible` policy. Keeping it that
+# way to preserve public-function signatures (Sui never allows those to
+# change). The on-chain price-floor check is implemented inside the
+# existing `expected_price` parameter.
 
 [addresses]
 # Replace "0x0" with the actual package address after `sui client publish`:

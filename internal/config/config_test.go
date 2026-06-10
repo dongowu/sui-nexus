@@ -33,5 +33,5 @@ func TestLoadHackathonDemoModeEnablesAgentWalletWithDeployedPackage(t *testing.T
 
 	assert.True(t, cfg.HackathonDemoMode)
 	assert.True(t, cfg.AgentWalletEnabled)
-	assert.Equal(t, "0xa051bbf9517d8ee94f2339e69877e4eacec38d3f4893b0aedf84774d18c54433", cfg.AgentWalletPackageID)
+	assert.Equal(t, "0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058", cfg.AgentWalletPackageID)
 }
