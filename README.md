@@ -421,3 +421,10 @@ sui-nexus/
 ## License
 
 MIT
+
+---
+
+## Dev notes
+
+一些设计取舍、踩坑记录、和未完成项都写在了 [DEVLOG.md](./DEVLOG.md)。
+如果评审想了解"为什么不那样写"，先翻那个文件。

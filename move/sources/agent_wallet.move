@@ -180,7 +180,10 @@ module sui_nexus::agent_wallet {
     /// 4. Protocol is in the allowlist (if non-empty)
     /// 5. Amount does not exceed remaining budget
     /// 6. Wallet has sufficient balance
-    /// 7. Additional risk checks are handled by the gateway Guardian before submission
+    ///
+    /// Design note: slippage 校验有意放在 gateway 端 Guardian，不在 Move 里做。
+    /// 原因：slippage 需要 observed_price 这种 oracle-style 的输入，链上 oracle 接入
+    /// 复杂度太高，gateway 读 CoinGecko/DeepBook orderbook 更现实。Move 只做"硬规则"。
     ///
     /// Production note: In a full zkLogin production deployment, agent_addr would
     /// be enforced via tx_context::sender() when the agent signs the transaction

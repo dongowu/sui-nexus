@@ -23,14 +23,16 @@ import (
 func main() {
 	cfg := config.Load()
 
-	// Initialize Redis
+	// ---- infra bring-up ----
+	// 我把 Redis / Kafka 做成"挂了不致命"的 optional 依赖。
+	// 原因：本地 demo + 评委跑环境经常没起 docker compose，gateway 应该能直接起来
+	// 并退化到内存模式。生产环境想做强依赖时再在 config 加一个 HardRequireRedis 开关。
 	redisStore, err := storage.NewRedisStore(cfg.RedisAddr)
 	if err != nil {
 		log.Printf("Warning: Redis connection failed: %v (continuing without Redis)", err)
 		redisStore = nil
 	}
 
-	// Initialize Kafka Producer
 	var producer *kafka.Producer
 	producer, err = kafka.NewProducer(cfg.KafkaBrokers, "sui-nexus-intents")
 	if err != nil {
@@ -53,7 +55,9 @@ func main() {
 		log.Printf("NLP client configured: %s", nlpEndpoint)
 	}
 
-	// Initialize PTB Builder and Executor (shared across handler and consumer)
+	// PTB Builder 和 Executor 这俩我一开始拆成两个 struct 觉得很优雅，
+	// 后来发现 demo 模式 / live 模式要换不同实现，interface 抽象就又加了一层。
+	// 也许 `executor` 直接做成 interface 会更简单 —— 留着等下次大改再重构。
 	ptbBuilder := ptb.NewBuilder(cfg.SuiGasBudget)
 	executor, err := ptb.NewSDKExecutor(cfg.SuiRPCURL, ptb.SDKExecutorConfig{
 		SignerMnemonic:   cfg.SuiSignerMnemonic,
@@ -61,6 +65,9 @@ func main() {
 		GasObjectID:      cfg.SuiGasObjectID,
 	})
 	if cfg.HackathonDemoMode {
+		// demo mode 用本地假执行器，避免每次都打 RPC 还要等 faucet。
+		// 注意：这条路径和真实路径 PTB 字节不一样，演示完要让评委看 `live_testnet_smoke.sh`
+		// 那个脚本，那才是真链上路径。
 		log.Println("Hackathon demo mode enabled: using local demo executor")
 		executor = ptb.NewDemoExecutor()
 	} else if err != nil {
