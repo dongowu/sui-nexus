@@ -54,8 +54,8 @@ type AgentExecuteRequest struct {
 	WalletID      string `json:"wallet_id" binding:"required"`
 	AmountMist    uint64 `json:"amount_mist" binding:"required"`
 	Protocol      string `json:"protocol" binding:"required"`
-	ExpectedPrice uint64 `json:"expected_price"` // Guardian: expected price in MIST (0 = skip check)
-	ObservedPrice uint64 `json:"observed_price"` // Guardian: observed quote/market price in MIST
+	ExpectedPrice uint64 `json:"expected_price"` // agent's committed minimum price floor in MIST (0 = skip on-chain check)
+	ObservedPrice uint64 `json:"observed_price"` // gateway-supplied live quote in MIST; Move enforces observed >= expected when both > 0
 	Description   string `json:"description"`
 
 	// zkLogin session

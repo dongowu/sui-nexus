@@ -180,7 +180,7 @@ func TestParseMoveAbortCode(t *testing.T) {
 		{2, 0, 0, "Wallet has been revoked"},
 		{4, 0, 0, "Wallet time window has expired"},
 		{7, 0, 0, "Insufficient balance in wallet"},
-		{9, 0, 0, "Guardian rejected the trade — slippage or price check failed"},
+		{9, 0, 0, "Guardian rejected the trade — observed price below the agent's expected floor"},
 		{99, 0, 0, "Move abort code 99"},
 		{0, 0, 0, "Move abort code 0"},
 	}

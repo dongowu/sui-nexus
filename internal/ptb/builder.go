@@ -275,6 +275,11 @@ func (b *Builder) BuildAgentWalletCreate(
 
 // BuildAgentWalletExecuteTrade builds a PTB for an agent to execute a trade
 // through the wallet (policy check + budget deduct + coin split).
+//
+// expectedPrice is the agent's committed minimum price floor (MIST). observedPrice
+// is the live quote the gateway saw. When both are > 0, the Move contract enforces
+// observedPrice >= expectedPrice as the on-chain backstop. Either may be 0 to
+// skip the on-chain floor (the gateway Guardian still does the rich slippage math).
 func (b *Builder) BuildAgentWalletExecuteTrade(
 	walletID string,
 	agentAddr string,
@@ -282,6 +287,7 @@ func (b *Builder) BuildAgentWalletExecuteTrade(
 	protocol string,
 	expectedPrice uint64,
 	description string,
+	observedPrice uint64,
 	packageID string,
 ) (*PTB, error) {
 	if strings.TrimSpace(walletID) == "" {
@@ -315,6 +321,7 @@ func (b *Builder) BuildAgentWalletExecuteTrade(
 				protocol,
 				fmt.Sprintf("%d", expectedPrice),
 				description,
+				fmt.Sprintf("%d", observedPrice),
 			},
 		},
 	}, nil

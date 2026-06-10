@@ -266,6 +266,7 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 		req.Protocol,
 		req.ExpectedPrice,
 		req.Description,
+		req.ObservedPrice,
 		packageID,
 	)
 	if err != nil {
@@ -464,7 +465,8 @@ func parseMoveAbortCode(code uint64, requested, allowed uint64) string {
 	case 7: // EInsufficientBalance
 		return "Insufficient balance in wallet"
 	case 9: // EGuardianRejected
-		return "Guardian rejected the trade — slippage or price check failed"
+		// Observed market price fell below the agent's expected_price floor.
+		return "Guardian rejected the trade — observed price below the agent's expected floor"
 	default:
 		return fmt.Sprintf("Move abort code %d", code)
 	}
