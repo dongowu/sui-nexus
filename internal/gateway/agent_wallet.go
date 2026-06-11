@@ -107,11 +107,13 @@ func (h *AgentWalletHandler) HandleCreateWallet(c *gin.Context) {
 
 	createResp, err := h.ptbExecutor.ExecutePTBDetailed(c.Request.Context(), ptbTxn)
 	if err != nil {
+		log.Printf("[agent-wallet] CREATE submit failed: %v (package=%s funding=%s gas=%s)", err, packageID, h.config.SuiFundingObjectID, h.config.SuiGasObjectID)
 		c.JSON(http.StatusInternalServerError, model.WalletResponse{
 			Error: &model.ErrorDetail{Code: "ERR_EXECUTION_FAILED", Message: err.Error()},
 		})
 		return
 	}
+	log.Printf("[agent-wallet] CREATE submitted: digest=%s", createResp.Digest)
 
 	walletID := extractWalletID(createResp)
 	if walletID == "" {
@@ -136,11 +138,13 @@ func (h *AgentWalletHandler) HandleCreateWallet(c *gin.Context) {
 		}
 		depositResp, err := h.ptbExecutor.ExecutePTBDetailed(c.Request.Context(), depositPTB)
 		if err != nil {
+			log.Printf("[agent-wallet] DEPOSIT submit failed: %v (wallet=%s funding=%s)", err, walletID, h.config.SuiFundingObjectID)
 			c.JSON(http.StatusInternalServerError, model.WalletResponse{
 				Error: &model.ErrorDetail{Code: "ERR_EXECUTION_FAILED", Message: fmt.Sprintf("wallet created but funding failed: %v", err)},
 			})
 			return
 		}
+		log.Printf("[agent-wallet] DEPOSIT submitted: digest=%s", depositResp.Digest)
 		balanceMist = extractWalletDepositedAmount(depositResp)
 	}
 
@@ -275,7 +279,7 @@ func (h *AgentWalletHandler) HandleAgentExecute(c *gin.Context) {
 		return
 	}
 
-	digest, err := h.ptbExecutor.ExecutePTB(c.Request.Context(), ptbTxn)
+	digest, err := h.ptbExecutor.ExecutePTBViaSuiCLI(c.Request.Context(), ptbTxn)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.WalletResponse{
 			Error: &model.ErrorDetail{Code: "ERR_POLICY_FAILED", Message: err.Error()},

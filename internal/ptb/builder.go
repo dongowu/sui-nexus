@@ -280,6 +280,11 @@ func (b *Builder) BuildAgentWalletCreate(
 // Move contract refuses to execute trades that pass expected_price == 0 —
 // that's the on-chain no-quote-without-floor guard. The rich slippage math
 // against `ObservedPrice` happens in the gateway Guardian.
+//
+// Live-mode PTB shape: MoveCall(execute_trade) -> TransferObjects(coin, agent)
+// The CLI executor interprets the second command as forwarding the result
+// of the first MoveCall (index 0) to the verified agent. In demo mode
+// the second command is ignored.
 func (b *Builder) BuildAgentWalletExecuteTrade(
 	walletID string,
 	agentAddr string,
@@ -320,6 +325,12 @@ func (b *Builder) BuildAgentWalletExecuteTrade(
 				protocol,
 				fmt.Sprintf("%d", expectedPrice),
 				description,
+			},
+		},
+		// Forward the approved Coin (MoveCall result #0) back to the agent.
+		Commands: []interface{}{
+			map[string]interface{}{
+				"TransferObjects": []interface{}{agentAddr, 0},
 			},
 		},
 	}, nil

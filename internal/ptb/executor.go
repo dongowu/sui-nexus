@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +25,8 @@ type Executor struct {
 	suiClient      suiWriteClient
 	suiAccount     *suiSignerAccount
 	suiGasObjectID string
+	suiCLI         string
+	suiCLIConfig   string
 }
 
 type suiWriteClient interface {
@@ -41,6 +44,8 @@ type SDKExecutorConfig struct {
 	SignerMnemonic   string
 	SignerPrivateKey string
 	GasObjectID      string
+	SuiCLIPath       string
+	SuiCLIConfigPath string
 }
 
 type RPCRequest struct {
@@ -84,6 +89,14 @@ func NewSDKExecutor(rpcURL string, cfg SDKExecutorConfig) (*Executor, error) {
 	executor.suiClient = sui.NewSuiClient(rpcURL)
 	executor.suiAccount = &account
 	executor.suiGasObjectID = strings.TrimSpace(cfg.GasObjectID)
+	executor.suiCLI = strings.TrimSpace(cfg.SuiCLIPath)
+	if executor.suiCLI == "" {
+		executor.suiCLI = "sui"
+	}
+	executor.suiCLIConfig = strings.TrimSpace(cfg.SuiCLIConfigPath)
+	if executor.suiCLIConfig == "" {
+		executor.suiCLIConfig = "$HOME/.sui/sui_config/client.yaml"
+	}
 	return executor, nil
 }
 
@@ -249,6 +262,74 @@ func (e *Executor) executeMoveCallDetailed(ctx context.Context, ptb *PTB) (*mode
 	return e.signAndExecute(ctx, txn, "Sui move call")
 }
 
+// ExecutePTBViaSuiCLI shells out to `sui client ptb` to submit a
+// multi-command programmable transaction block. Used when the on-chain
+// function returns values that the gateway needs to forward (e.g. the
+// approved Coin from agent_wallet::execute_trade goes back to the agent).
+//
+// Required PTB shape:
+//   - PTB.MoveCall for the primary call (the "first" command)
+//   - PTB.Commands[].TransferObjects: {"to": addr, "from_result_idx": N}
+//     appended after the MoveCall to forward a result by index
+func (e *Executor) ExecutePTBViaSuiCLI(ctx context.Context, ptb *PTB) (string, error) {
+	if e.isDemoMode() {
+		return e.executeDemoPTB(ctx, ptb)
+	}
+	if e.suiCLI == "" {
+		return "", fmt.Errorf("sui CLI path is not configured")
+	}
+	if ptb == nil || ptb.MoveCall == nil {
+		return "", fmt.Errorf("move call plan is required for CLI PTB execution")
+	}
+
+	args := []string{"client", "ptb",
+		"--client-config", e.suiCLIConfig,
+		"--move-call", ptb.MoveCall.PackageObjectID, ptb.MoveCall.Module, ptb.MoveCall.Function,
+	}
+	if len(ptb.MoveCall.TypeArguments) > 0 {
+		for _, t := range ptb.MoveCall.TypeArguments {
+			args = append(args, fmt.Sprintf("%v", t))
+		}
+	}
+	args = append(args, "--gas-budget", strconv.FormatUint(ptb.GasBudget, 10),
+		"--json", "--sender", e.suiAccount.Address, "--yes")
+
+	// Optional: append TransferObjects commands from PTB.Commands
+	for _, raw := range ptb.Commands {
+		cmd, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		transfer, ok := cmd["TransferObjects"].([]interface{})
+		if !ok || len(transfer) < 2 {
+			continue
+		}
+		recipient, ok := transfer[0].(string)
+		if !ok {
+			continue
+		}
+		args = append(args, "--transfer-objects", fmt.Sprintf("[Result(%v)]", transfer[1]), recipient)
+	}
+
+	cmd := exec.CommandContext(ctx, e.suiCLI, args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("sui client ptb failed: %w (%s)", err, string(out))
+	}
+	// Try to parse the digest out of the JSON output. We accept any string
+	// with a 0x... base58-ish 30+ char substring as the digest.
+	for _, line := range strings.Split(string(out), "\n") {
+		if i := strings.Index(line, `"digest":`); i >= 0 {
+			rest := line[i+len(`"digest":`):]
+			rest = strings.Trim(rest, " ,\"")
+			if strings.HasPrefix(rest, "0x") && len(rest) > 30 {
+				return rest, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("could not parse digest from sui client ptb output: %s", string(out))
+}
+
 func (e *Executor) executeTransferSuiDetailed(ctx context.Context, ptb *PTB) (*models.SuiTransactionBlockResponse, error) {
 	if e.suiClient == nil || e.suiAccount == nil || strings.TrimSpace(e.suiGasObjectID) == "" {
 		return nil, fmt.Errorf("sui sdk executor is not configured")
@@ -293,7 +374,15 @@ func (e *Executor) signAndExecute(ctx context.Context, txn models.TxnMetaData, l
 		RequestType: "WaitForLocalExecution",
 	})
 	if err != nil {
+		// Surface the underlying Sui error message (often contains abort code).
 		return nil, fmt.Errorf("failed to sign and execute %s transaction: %w", label, err)
+	}
+	// Surface the on-chain failure if the response carried one. We only
+	// check Status.Status — the SDK doesn't always populate
+	// ConfirmedLocalExecution in older responses and treating false as failure
+	// would break the demo mock.
+	if resp.Effects.Status.Status == "failure" {
+		return nil, fmt.Errorf("%s transaction failed on-chain: %s", label, resp.Effects.Status.Error)
 	}
 	if strings.TrimSpace(resp.Digest) == "" {
 		return nil, fmt.Errorf("%s execution returned empty digest", label)

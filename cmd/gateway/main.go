@@ -63,6 +63,12 @@ func main() {
 		SignerMnemonic:   cfg.SuiSignerMnemonic,
 		SignerPrivateKey: cfg.SuiSignerPrivateKey,
 		GasObjectID:      cfg.SuiGasObjectID,
+		// Empty -> executor falls back to "sui" on PATH. The Sui CLI is
+		// required in live mode because MoveCall returns a Coin<SUI> that
+		// needs to be forwarded via a multi-command PTB (the Go SDK only
+		// exposes single-call MoveCall).
+		SuiCLIPath:       os.Getenv("SUI_CLI_PATH"),
+		SuiCLIConfigPath: os.Getenv("SUI_CLI_CONFIG_PATH"),
 	})
 	if cfg.HackathonDemoMode {
 		// demo mode 用本地假执行器，避免每次都打 RPC 还要等 faucet。
