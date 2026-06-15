@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWalrusClient_WriteAndRead(t *testing.T) {
+func TestWalrusClient_Write(t *testing.T) {
 	client := NewClient("https://walrus.testnet.sui.io")
 	ctx := context.Background()
 
@@ -19,10 +19,6 @@ func TestWalrusClient_WriteAndRead(t *testing.T) {
 
 	assert.NotEmpty(t, blobID)
 	assert.Len(t, blobID, 64) // BlobID should be 64 chars (hex)
-
-	data, err := client.Read(ctx, blobID)
-	assert.NoError(t, err)
-	assert.Equal(t, testData, data)
 }
 
 func TestWalrusClient_WriteInvalid(t *testing.T) {

@@ -3,11 +3,8 @@ package zklogin
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
@@ -101,65 +98,5 @@ func GenerateJwtRandomness() (string, error) {
 	return "0x" + fmt.Sprintf("%x", b), nil
 }
 
-// ────────────────────────────────────────────────────────────
-// JWT utilities
-// ────────────────────────────────────────────────────────────
 
-// ParseJWT parses a JWT and extracts the claims.
-func ParseJWT(jwt string) (map[string]interface{}, error) {
-	parts := strings.Split(jwt, ".")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid JWT format: expected 3 parts, got %d", len(parts))
-	}
 
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode JWT payload: %w", err)
-	}
-
-	var claims map[string]interface{}
-	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
-		return nil, fmt.Errorf("failed to parse JWT claims: %w", err)
-	}
-
-	return claims, nil
-}
-
-// ValidateJWTClaims validates the essential JWT claims.
-func ValidateJWTClaims(claims map[string]interface{}, expectedIssuer, expectedAudience, expectedNonce string) error {
-	iss, ok := claims["iss"].(string)
-	if !ok || iss != expectedIssuer {
-		return fmt.Errorf("invalid issuer: expected %s, got %v", expectedIssuer, claims["iss"])
-	}
-
-	aud, ok := claims["aud"]
-	if !ok {
-		return fmt.Errorf("missing audience claim")
-	}
-	switch v := aud.(type) {
-	case string:
-		if v != expectedAudience {
-			return fmt.Errorf("invalid audience: expected %s, got %s", expectedAudience, v)
-		}
-	case []interface{}:
-		found := false
-		for _, a := range v {
-			if a == expectedAudience {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("audience %s not found in token", expectedAudience)
-		}
-	}
-
-	if expectedNonce != "" {
-		nonce, ok := claims["nonce"].(string)
-		if !ok || nonce != expectedNonce {
-			return fmt.Errorf("invalid nonce")
-		}
-	}
-
-	return nil
-}

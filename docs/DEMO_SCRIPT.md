@@ -90,14 +90,14 @@ curl http://localhost:8080/api/v1/task/{task_id}
 >
 > Let's verify on Sui Explorer..."
 
-**Open Browser:** `https://suiexplorer.com/txblock/{tx_digest}?network=testnet`
+**Open Browser:** `https://suiscan.xyz/txblock/{tx_digest}?network=testnet`
 
 ---
 
 ## 🎬 Demo Preparation Checklist
 
 ### Before Demo:
-- [ ] Start Kafka: `docker run -d -p 9092:9092 apache/kafka`
+- [ ] Start Kafka: `docker run -d -p 9092:9092 apache/kafka:3.7.0`
 - [ ] Start Redis: `redis-server`
 - [ ] Fund Sui testnet account
 - [ ] Set environment variables:

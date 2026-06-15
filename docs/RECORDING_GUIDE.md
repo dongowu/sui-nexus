@@ -1,7 +1,7 @@
 # Sui Overflow 2026 — Real Testnet Demo Recording Guide
 
 > Records real Sui testnet transactions for the submission demo video.
-> All transactions are verifiable on-chain at `https://suiexplorer.com/?network=testnet`
+> All transactions are verifiable on-chain at `https://suiscan.xyz/?network=testnet`
 
 ## Pre-Recording Setup
 
@@ -97,7 +97,7 @@ curl -X POST http://localhost:8080/api/v1/wallet/create \
 *Show: Command output with real `wallet_id` and `tx_digest`, open Explorer to show pending tx*
 *Live note: current JSON-RPC path keeps on-chain allowlist empty during smoke verification; budget, owner, and revoke enforcement are still live.*
 
-**Explorer verification**: Show the pending transaction in `https://suiexplorer.com/?network=testnet`
+**Explorer verification**: Show the pending transaction in `https://suiscan.xyz/?network=testnet`
 
 ---
 

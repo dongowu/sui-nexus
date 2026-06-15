@@ -50,7 +50,7 @@ def ok(result, label):
 def explorer(digest):
     if digest.startswith("demo-"):
         return "local demo digest (real testnet package is listed in README)"
-    return f"https://suiexplorer.com/txblock/{digest}?network=testnet"
+    return f"https://suiscan.xyz/txblock/{digest}?network=testnet"
 
 def print_tx(label, digest):
     print(f"    {label}:  {digest}")

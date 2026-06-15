@@ -54,6 +54,21 @@ func RateLimit(limit int) gin.HandlerFunc {
 	var mu sync.Mutex
 	buckets := make(map[string]*bucket)
 
+	// Background cleanup: evict stale buckets every 5 minutes
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			mu.Lock()
+			cutoff := time.Now().Add(-10 * time.Minute)
+			for k, b := range buckets {
+				if b.lastReset.Before(cutoff) {
+					delete(buckets, k)
+				}
+			}
+			mu.Unlock()
+		}
+	}()
+
 	return func(c *gin.Context) {
 		apiKey := c.GetHeader("X-API-Key")
 		if apiKey == "" {
@@ -89,7 +104,6 @@ func RateLimit(limit int) gin.HandlerFunc {
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-API-Key, X-Signature, X-Timestamp, Authorization")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 

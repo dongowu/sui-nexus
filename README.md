@@ -5,7 +5,7 @@
 > 🏆 Sui Overflow 2026 — Agentic Web + Walrus Tracks
 >
 > **Live on Sui Testnet**: `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058`
-> ([Verify on Explorer](https://suiexplorer.com/object/0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058?network=testnet))
+> ([Verify on Explorer](https://suiscan.xyz/object/0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058?network=testnet))
 >
 > Original v1 still addressable at `0xa051...4453` (audit trail, never deleted on Sui).
 >
@@ -172,8 +172,8 @@ It then prints the dashboard URL — open it in a browser for the interactive co
 
 | Contract | Address | Explorer |
 |---|---|---|
-| Package | `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058` (v2) | [View](https://suiexplorer.com/object/0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058?network=testnet) |
-| Upgrade Cap | `0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f` | [View](https://suiexplorer.com/object/0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f?network=testnet) |
+| Package | `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058` (v2) | [View](https://suiscan.xyz/object/0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058?network=testnet) |
+| Upgrade Cap | `0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f` | [View](https://suiscan.xyz/object/0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f?network=testnet) |
 
 ---
 

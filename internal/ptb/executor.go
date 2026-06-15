@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -95,7 +96,11 @@ func NewSDKExecutor(rpcURL string, cfg SDKExecutorConfig) (*Executor, error) {
 	}
 	executor.suiCLIConfig = strings.TrimSpace(cfg.SuiCLIConfigPath)
 	if executor.suiCLIConfig == "" {
-		executor.suiCLIConfig = "$HOME/.sui/sui_config/client.yaml"
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("cannot determine home directory: %w", err)
+		}
+		executor.suiCLIConfig = homeDir + "/.sui/sui_config/client.yaml"
 	}
 	return executor, nil
 }
@@ -200,7 +205,10 @@ func (e *Executor) ExecutePTBDetailed(ctx context.Context, ptb *PTB) (*models.Su
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("PTB execution failed: status %d (body unreadable: %v)", resp.StatusCode, readErr)
+		}
 		return nil, fmt.Errorf("PTB execution failed: status %d, body: %s", resp.StatusCode, string(body))
 	}
 
@@ -390,41 +398,4 @@ func (e *Executor) signAndExecute(ctx context.Context, txn models.TxnMetaData, l
 	return &resp, nil
 }
 
-func (e *Executor) GetTransaction(ctx context.Context, digest string) (*TransactionResult, error) {
-	reqBody, _ := json.Marshal(RPCRequest{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "sui_getTransactionBlock",
-		Params:  []interface{}{digest},
-	})
 
-	req, err := http.NewRequestWithContext(ctx, "POST", e.rpcURL, bytes.NewReader(reqBody))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := e.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var rpcResp RPCResponse
-	if err := json.NewDecoder(resp.Body).Decode(&rpcResp); err != nil {
-		return nil, err
-	}
-
-	var result TransactionResult
-	if err := json.Unmarshal(rpcResp.Result, &result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-}
-
-type TransactionResult struct {
-	Digest    string `json:"digest"`
-	Confirmed bool   `json:"confirmed"`
-	Effects   string `json:"effects"`
-}

@@ -450,31 +450,6 @@ func (h *AgentWalletHandler) runGuardianChecks(req *model.AgentExecuteRequest, w
 	return GuardianResult{Passed: true}
 }
 
-// parseMoveAbortCode maps Move abort codes from agent_wallet errors to
-// human-readable policy violation messages. The abort code values must stay
-// in sync with agent_wallet.move.
-func parseMoveAbortCode(code uint64, requested, allowed uint64) string {
-	switch code {
-	case 6: // EBudgetExceeded
-		return fmt.Sprintf("Budget cap exceeded: requested %d MIST, cap is %d MIST per epoch", requested, allowed)
-	case 5: // EProtocolNotAllowed
-		return "Protocol not in wallet's allowed list"
-	case 1: // ENotAuthorized
-		return "Agent not authorized for this wallet"
-	case 2: // EWalletRevoked
-		return "Wallet has been revoked"
-	case 4: // EExpired
-		return "Wallet time window has expired"
-	case 7: // EInsufficientBalance
-		return "Insufficient balance in wallet"
-	case 9: // EGuardianRejected
-		// Observed market price fell below the agent's expected_price floor.
-		return "Guardian rejected the trade — observed price below the agent's expected floor"
-	default:
-		return fmt.Sprintf("Move abort code %d", code)
-	}
-}
-
 func (h *AgentWalletHandler) verifyCaller(sessionToken, userAddress, fallbackAddress string) (string, int, *model.ErrorDetail) {
 	addr := userAddress
 	if addr == "" {
@@ -809,7 +784,11 @@ func (h *AgentWalletHandler) updateWalletAfterTrade(walletID string, amountMist 
 
 	// Sync to Redis
 	if h.redisStore != nil {
-		data, _ := json.Marshal(w)
+		data, err := json.Marshal(w)
+		if err != nil {
+			log.Printf("[agent-wallet] failed to marshal wallet for redis sync: %v", err)
+			return
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		h.redisStore.Client().Set(ctx, "wallet:"+walletID, data, 24*time.Hour)

@@ -6,8 +6,8 @@
 |-------|-------|
 | **Project Name** | Sui-Nexus |
 | **Tracks** | Agentic Web (Intent Engine) + Walrus |
-| **Repository** | (Your GitHub URL) |
-| **Demo Video** | (YouTube/Cloud storage URL) |
+| **Repository** | https://github.com/your-username/sui-nexus |
+| **Demo Video** | (YouTube/Vimeo URL) |
 | **Contract Address** | `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058` (v2; v1 at `0xa051...4453` still live) |
 
 ---
@@ -37,7 +37,7 @@ Demonstrates 9/9 requirements:
 
 ### Track 2: Walrus — AI Agent Memory System
 
-Demonstrates 7/7 requirements:
+Demonstrates 5/5 requirements:
 - [x] Persistent data via Walrus (write + read)
 - [x] Move MemoryObject for on-chain blob references
 - [x] Long-running workflow: Analyst → Walrus → Trader
@@ -50,8 +50,8 @@ Demonstrates 7/7 requirements:
 
 | Contract | Testnet Address | Explorer |
 |----------|----------------|----------|
-| Package | `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058` | [View](https://suiexplorer.com/object/0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058?network=testnet) |
-| Upgrade Cap | `0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f` | [View](https://suiexplorer.com/object/0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f?network=testnet) |
+| Package | `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058` | [View](https://suiscan.xyz/object/0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058?network=testnet) |
+| Upgrade Cap | `0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f` | [View](https://suiscan.xyz/object/0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f?network=testnet) |
 
 ---
 

@@ -40,23 +40,6 @@ type MoveCallPlan struct {
 	Arguments       []interface{} `json:"arguments,omitempty"`
 }
 
-type TransferObject struct {
-	Recipient string `json:"recipient"`
-	Amount    uint64 `json:"amount"`
-}
-
-type Swap struct {
-	TokenIn  string `json:"token_in"`
-	TokenOut string `json:"token_out"`
-	Amount   uint64 `json:"amount"`
-	Slippage string `json:"slippage"`
-}
-
-type MintMemoryObject struct {
-	TaskID string `json:"task_id"`
-	BlobID string `json:"blob_id"`
-}
-
 type Builder struct {
 	gasBudget uint64
 }

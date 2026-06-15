@@ -52,16 +52,6 @@ func (s *RedisStore) GetTask(ctx context.Context, taskID string) (*model.Task, e
 	return &task, nil
 }
 
-func (s *RedisStore) UpdateTaskStatus(ctx context.Context, taskID string, status model.TaskStatus) error {
-	task, err := s.GetTask(ctx, taskID)
-	if err != nil || task == nil {
-		return err
-	}
-	task.Status = status
-	task.UpdatedAt = time.Now()
-	return s.SaveTask(ctx, task)
-}
-
 func (s *RedisStore) Close() error {
 	return s.client.Close()
 }

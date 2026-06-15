@@ -7,10 +7,10 @@
 | 项目 | 状态 |
 |------|------|
 | Sui CLI | ✅ 已安装 `/opt/homebrew/bin/sui` |
-| 测试网钱包 | ✅ `0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1` |
-| Gas Coin | ✅ `0x111fbd6db848078d54afcd654406d572cccc1cc78e705333750c1e5c006e017d` (余额: 0.47 SUI) |
+| 测试网钱包 | ✅ `0x...` |
+| Gas Coin | ✅ `0x...` (余额充足) |
 | 已部署 Package | ✅ `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058` (v2) |
-| 私钥 | ✅ 已导出（`suiprivkey1qq6ulqzpm...`） |
+| 私钥 | ✅ 已配置 |
 
 **注意**: 钱包只有 0.47 SUI，足够录制 demo 但建议后续补充测试网 funds。
 
@@ -57,11 +57,11 @@ python3 scripts/demo/agent_wallet_demo.py
 curl -X POST http://localhost:8080/api/v1/wallet/create \
   -H 'Content-Type: application/json' \
   -d '{
-    "agent_address": "0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1",
+    "agent_address": "0xYOUR_ADDRESS",
     "budget_cap_mist": 500000000000,
     "allowed_protocols": [],
     "time_end_epoch": 999999,
-    "user_address": "0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1",
+    "user_address": "0xYOUR_ADDRESS",
     "session_token": "testnet-session-token"
   }'
 
@@ -75,7 +75,7 @@ curl -X POST http://localhost:8080/api/v1/wallet/execute \
     "expected_price": 1000,
     "observed_price": 1000,
     "description": "Limit order: Buy SUI on DeepBook",
-    "user_address": "0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1",
+    "user_address": "0xYOUR_ADDRESS",
     "session_token": "testnet-session-token"
   }'
 
@@ -89,7 +89,7 @@ curl -X POST http://localhost:8080/api/v1/wallet/execute \
     "expected_price": 1000,
     "observed_price": 1000,
     "description": "Attempted overspend",
-    "user_address": "0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1",
+    "user_address": "0xYOUR_ADDRESS",
     "session_token": "testnet-session-token"
   }'
 
@@ -98,7 +98,7 @@ curl -X POST "http://localhost:8080/api/v1/wallet/<WALLET_ID>/revoke" \
   -H 'Content-Type: application/json' \
   -d '{
     "wallet_id": "<WALLET_ID>",
-    "user_address": "0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1",
+    "user_address": "0xYOUR_ADDRESS",
     "session_token": "testnet-session-token"
   }'
 ```
@@ -139,7 +139,7 @@ ffmpeg -f avfoundation -i "1:0" \
 每个交易完成后，用真实 tx_digest 在 Explorer 验证：
 
 ```
-https://suiexplorer.com/txblock/<TX_DIGEST>?network=testnet
+https://suiscan.xyz/txblock/<TX_DIGEST>?network=testnet
 ```
 
 ---
@@ -169,8 +169,8 @@ curl -s -X POST https://fullnode.testnet.sui.io:443 \
 ```bash
 # Sui-Nexus Testnet Environment — Real Transaction Mode
 export SUI_RPC_URL="https://fullnode.testnet.sui.io:443"
-export SUI_SIGNER_PRIVATE_KEY="suiprivkey1qq6ulqzpm7hkhxaa7z7gyvfa44mahz03xwr2uzal0vp9t3qt7z972ag8454"
-export SUI_GAS_OBJECT_ID="0x111fbd6db848078d54afcd654406d572cccc1cc78e705333750c1e5c006e017d"
+export SUI_SIGNER_PRIVATE_KEY="suiprivkey..."
+export SUI_GAS_OBJECT_ID="0x..."
 export SUI_FUNDING_OBJECT_ID="0x..."
 export SUI_SIGNER_MNEMONIC=""
 export AGENT_WALLET_PACKAGE_ID="0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058"
@@ -182,8 +182,8 @@ export HMAC_SECRET_KEY="dev-secret-key-change-in-prod"
 export KAFKA_BROKERS="localhost:9092"
 export REDIS_ADDR="localhost:6379"
 export ZKLOGIN_ENABLED="false"
-export DEMO_AGENT_ADDRESS="0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1"
-export DEMO_ZKLOGIN_ADDRESS="0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1"
+export DEMO_AGENT_ADDRESS="0x..."
+export DEMO_ZKLOGIN_ADDRESS="0x..."
 export DEMO_ZKLOGIN_TOKEN="testnet-session-token"
 export HACKATHON_DEMO_MODE="false"
 export AGENT_WALLET_ENABLED="true"

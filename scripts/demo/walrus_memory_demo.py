@@ -42,7 +42,7 @@ def header(t):
 def explorer(d):
     if d.startswith("demo-"):
         return "local demo digest (real testnet package is listed in README)"
-    return f"https://suiexplorer.com/txblock/{d}?network=testnet"
+    return f"https://suiscan.xyz/txblock/{d}?network=testnet"
 
 def hmac_sign(task_id, ts, action, amount):
     return hmac.new(SECRET_KEY, f"{task_id}:{ts}:{action}:{amount}".encode(), hashlib.sha256).hexdigest()

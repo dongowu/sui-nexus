@@ -3,7 +3,6 @@ package gateway
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -165,32 +164,6 @@ func TestGuardianHighConcentrationWarning(t *testing.T) {
 	assert.Equal(t, "concentration", executeResp.Guardian.Reason)
 	assert.Equal(t, uint64(600), executeResp.Guardian.Requested)
 	assert.Equal(t, uint64(500), executeResp.Guardian.Allowed) // 50% of 1000
-}
-
-func TestParseMoveAbortCode(t *testing.T) {
-	tests := []struct {
-		code      uint64
-		requested uint64
-		allowed   uint64
-		want      string
-	}{
-		{6, 600, 500, "Budget cap exceeded: requested 600 MIST, cap is 500 MIST per epoch"},
-		{5, 0, 0, "Protocol not in wallet's allowed list"},
-		{1, 0, 0, "Agent not authorized for this wallet"},
-		{2, 0, 0, "Wallet has been revoked"},
-		{4, 0, 0, "Wallet time window has expired"},
-		{7, 0, 0, "Insufficient balance in wallet"},
-		{9, 0, 0, "Guardian rejected the trade — observed price below the agent's expected floor"},
-		{99, 0, 0, "Move abort code 99"},
-		{0, 0, 0, "Move abort code 0"},
-	}
-
-	for _, tc := range tests {
-		t.Run(fmt.Sprintf("code_%d", tc.code), func(t *testing.T) {
-			got := parseMoveAbortCode(tc.code, tc.requested, tc.allowed)
-			assert.Equal(t, tc.want, got)
-		})
-	}
 }
 
 func postWalletRequest[T any](t *testing.T, handler gin.HandlerFunc, path string, payload T) model.WalletResponse {

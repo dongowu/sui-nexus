@@ -5,14 +5,14 @@
 - **主赛道**: Agentic Web (Intent Engine 子赛道)
 - **副赛道**: Walrus
 - **项目名**: Sui-Nexus
-- **仓库**: (你的 GitHub 仓库 URL)
+- **仓库**: https://github.com/your-username/sui-nexus
 
 ## 已部署合约 (Sui Testnet)
 
 | 合约 | 地址 | Explorer |
 |------|------|----------|
-| Package | `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058` (v2) | [View](https://suiexplorer.com/object/0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058?network=testnet) |
-| Upgrade Cap | `0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f` | [View](https://suiexplorer.com/object/0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f?network=testnet) |
+| Package | `0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058` (v2) | [View](https://suiscan.xyz/object/0x262b81797305980a5ddf2c509a6ac8fb9577dee6ac6c96ceba6580bd3dde5058?network=testnet) |
+| Upgrade Cap | `0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f` | [View](https://suiscan.xyz/object/0x225f7b278c1fc2d3b5cf3d38a5f5e344463aaaf67f52a97b4a51008499a2145f?network=testnet) |
 
 ## 提交材料清单
 
@@ -40,7 +40,7 @@ HACKATHON_DEMO_MODE=true ./scripts/demo/run_agent_wallet_demo.sh
 
 ```bash
 # 1. 启动依赖服务
-docker run -d --name kafka -p 9092:9092 apache/kafka
+docker run -d --name kafka -p 9092:9092 apache/kafka:3.7.0
 docker run -d --name redis -p 6379:6379 redis:alpine
 
 # 2. 设置环境变量

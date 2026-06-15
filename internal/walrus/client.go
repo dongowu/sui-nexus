@@ -49,7 +49,10 @@ func (c *Client) Write(ctx context.Context, data []byte) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return "", fmt.Errorf("Walrus write failed: status %d (body unreadable: %v)", resp.StatusCode, readErr)
+		}
 		return "", fmt.Errorf("Walrus write failed: status %d, body: %s", resp.StatusCode, string(body))
 	}
 
@@ -59,26 +62,4 @@ func (c *Client) Write(ctx context.Context, data []byte) (string, error) {
 	}
 
 	return result.BlobID, nil
-}
-
-func (c *Client) Read(ctx context.Context, blobID string) ([]byte, error) {
-	url := fmt.Sprintf("%s/v1/blobs/%s", c.apiURL, blobID)
-
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read from Walrus: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Walrus read failed: status %d, body: %s", resp.StatusCode, string(body))
-	}
-
-	return io.ReadAll(resp.Body)
 }

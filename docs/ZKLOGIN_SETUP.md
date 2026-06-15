@@ -73,7 +73,7 @@ open http://localhost:8080/api/v1/auth/zklogin
 
 ```bash
 # 使用 testnet-session-token 直接提交交易
-export DEMO_ZKLOGIN_ADDRESS="0x79ee84d793ed41f9868a63c7d0f2e62b2752ea0078944db44940b751d27a05a1"
+export DEMO_ZKLOGIN_ADDRESS="0xYOUR_ADDRESS"
 export DEMO_ZKLOGIN_TOKEN="testnet-session-token"
 ```
 

@@ -143,4 +143,4 @@ curl -fsS "${GATEWAY_URL}/api/v1/wallet/${WALLET_ID}" | jq .
 echo
 echo "Create digest:  ${CREATE_DIGEST}"
 echo "Wallet ID:      ${WALLET_ID}"
-echo "Explorer link:  https://suiexplorer.com/txblock/${CREATE_DIGEST}?network=testnet"
+echo "Explorer link:  https://suiscan.xyz/txblock/${CREATE_DIGEST}?network=testnet"

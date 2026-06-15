@@ -72,6 +72,6 @@ python3 scripts/demo/agent_wallet_demo.py
 echo ""
 echo "══════════════════════════════════════════════════════"
 echo "  Testnet recording complete!"
-echo "  Check tx digests on: https://suiexplorer.com/?network=testnet"
+echo "  Check tx digests on: https://suiscan.xyz/?network=testnet"
 echo "══════════════════════════════════════════════════════"
 echo ""

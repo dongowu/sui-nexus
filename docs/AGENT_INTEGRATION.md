@@ -116,7 +116,7 @@ def get_task_status(task_id):
 status = get_task_status("task-001")
 print(f"Status: {status['status']}")
 if status.get('tx_digest'):
-    print(f"Sui TX: https://suiexplorer.com/txblock/{status['tx_digest']}?network=testnet")
+    print(f"Sui TX: https://suiscan.xyz/txblock/{status['tx_digest']}?network=testnet")
 ```
 
 ## 5️⃣ 实时监听（WebSocket）
