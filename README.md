@@ -10,7 +10,7 @@
 > Original v1 still addressable at `0xa051...4453` (audit trail, never deleted on Sui).
 >
 > **v2 upgrade** (tx `HEpaW4...AH5G`): on-chain `expected_price > 0` is now a hard requirement
-> (was previously a stub). See [DEVLOG.md](./DEVLOG.md) and `move/sources/agent_wallet.move`
+> (was previously a stub). See `move/sources/agent_wallet.move`
 > `execute_trade` for the rationale.
 
 ---
@@ -219,8 +219,8 @@ sui move build
 sui client publish --gas-budget 100000000   # save the new package ID
 ```
 
-See [docs/HACKATHON_GUIDE.md](docs/HACKATHON_GUIDE.md) for the full guide including zkLogin
-OAuth setup and Walrus storage details.
+See [docs/DORAHACKS_SUBMISSION.md](docs/DORAHACKS_SUBMISSION.md) for the submission guide and
+[docs/ZKLOGIN_SETUP.md](docs/ZKLOGIN_SETUP.md) for zkLogin OAuth setup.
 
 ---
 
@@ -259,13 +259,13 @@ sui-nexus/
 ├── move/sources/                  # agent_wallet.move, agent_memory.move
 ├── scripts/demo/                  # Judge demos (Python + shell)
 ├── web/dashboard.html             # Real-time WebSocket dashboard
-└── docs/                          # HACKATHON_GUIDE, RECORDING_GUIDE, etc.
+└── docs/                          # DORAHACKS_SUBMISSION, RECORDING_GUIDE, ZKLOGIN_SETUP
 ```
 
 Full per-file comments live at the top of each file. Deep dives:
-[docs/HACKATHON_GUIDE.md](docs/HACKATHON_GUIDE.md) ·
-[docs/TESTNET_RECORDING_GUIDE.md](docs/TESTNET_RECORDING_GUIDE.md) ·
-[docs/AGENT_INTEGRATION.md](docs/AGENT_INTEGRATION.md)
+[docs/DORAHACKS_SUBMISSION.md](docs/DORAHACKS_SUBMISSION.md) ·
+[docs/RECORDING_GUIDE.md](docs/RECORDING_GUIDE.md) ·
+[docs/ZKLOGIN_SETUP.md](docs/ZKLOGIN_SETUP.md)
 
 ---
 
@@ -277,6 +277,4 @@ MIT
 
 ## Dev notes
 
-Design tradeoffs, "what I tried that didn't work", and a TODO list are in
-[DEVLOG.md](./DEVLOG.md). If you want to understand "why it isn't built the other way",
-start there.
+Design tradeoffs and project rationale are documented in inline code comments.
