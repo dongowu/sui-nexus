@@ -19,14 +19,45 @@
 
 Sui-Nexus is the missing middle layer between AI agents and Sui. Instead of building another
 agent that trades, it builds the **settlement infrastructure** those agents need to trade safely
-on-chain: HMAC + zkLogin auth, Move-enforced wallet policy, Walrus-backed memory, and PTB-based
-atomic execution.
+on-chain: HMAC + zkLogin auth, **Move-enforced wallet policy** (not middleware-enforced),
+Walrus-backed memory, and PTB-based atomic execution.
+
+> **Core innovation**: Policy constraints (budget, protocol scope, time window, price floor) are
+> enforced atomically in a Move smart contract — not in gateway middleware. The blockchain
+> itself rejects policy violations. See [Key Innovation](#-key-innovation-policy-lives-in-move-not-in-middleware).
 
 ```bash
 # judge-friendly demo — no setup, no keys, no chain
 HACKATHON_DEMO_MODE=true ./scripts/demo/run_agent_wallet_demo.sh
 # open the dashboard it prints
 ```
+
+---
+
+## 🎯 Key Innovation: Policy Lives in Move, Not in Middleware
+
+Most "AI agent wallets" check budget caps and protocol scope in backend middleware — a `if amount > budget { return }` in Python or Node.js that any agent can bypass by calling a different endpoint. **Sui-Nexus does not.**
+
+The `AgentWallet` is a **Move shared object**. Every trade goes through a single `execute_trade` function in the Move contract, which atomically enforces **all 7 policy constraints in one transaction**:
+
+```
+Agent → Gateway Guardian → Move Contract (atomic 7-check enforcement on-chain)
+                                ↓ fails any check → whole tx reverts
+```
+
+| # | Constraint | Move Check (`agent_wallet.move:206-250`) | Bypassable? |
+|---|---|---|---|
+| 1 | **Agent identity** | `assert!(agent_addr == wallet.agent_address, ENotAuthorized)` | ❌ Chain-enforced |
+| 2 | **Wallet active** | `assert!(wallet.is_active, EWalletRevoked)` | ❌ Chain-enforced |
+| 3 | **Time window** | `assert!(epoch >= time_start && epoch <= time_end)` | ❌ Chain-enforced |
+| 4 | **Protocol allowlist** | `vector::contains(&allowed_protocols, &protocol)` | ❌ Chain-enforced |
+| 5 | **Budget cap** | `assert!(new_spent <= budget_cap_mist, EBudgetExceeded)` | ❌ Chain-enforced |
+| 6 | **Balance sufficiency** | `assert!(balance >= amount_mist)` | ❌ Chain-enforced |
+| 7 | **Price-floor commitment** | `assert!(expected_price > 0, EGuardianRejected)` | ❌ Chain-enforced |
+
+> **The gateway is a relay, not the authority. The Move contract is the authority.**
+
+This is **defense-in-depth** — the gateway Guardian (slippage, concentration checks) catches bad inputs early, and the Move contract enforces policy immutably on-chain. An agent that tries to overspend, use an unauthorized protocol, or skip the price floor gets **rejected by the blockchain**, not by a config file.
 
 ---
 
